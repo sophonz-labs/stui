@@ -182,9 +182,16 @@ func TestSnapshotKillRestore(t *testing.T) {
 			agentID = strings.TrimPrefix(l, "1 ")
 		}
 	}
-	waitFor(t, "the typed resume line", func() bool {
-		return strings.Contains(must(t, x, "capture-pane", "-p", "-t", agentID), "claude --resume be3612de-d629")
-	})
+	for i := 0; ; i++ {
+		screen := must(t, x, "capture-pane", "-p", "-t", agentID)
+		if strings.Contains(screen, "claude --resume be3612de-d629") {
+			break
+		}
+		if i == 50 {
+			t.Fatalf("timed out waiting for the typed resume line; screen:\n%s", screen)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 	// Once: typed when the shell's editor is up, not echoed by the
 	// terminal first and drawn again by the editor.
 	time.Sleep(time.Second)

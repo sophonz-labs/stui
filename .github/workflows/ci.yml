@@ -19,11 +19,19 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # zsh: the restore suites run their panes' shell as /bin/zsh when it is
+      # there, which execs a `-c` command's last word as the shells people use
+      # do; dash (Ubuntu's /bin/sh) forks it, and a pane running `sleep` then
+      # reads as `sh`. ps: a snapshot reads each pane's command line with it.
       - name: install tmux
         run: |
-          if [ "$RUNNER_OS" = macOS ]; then brew install tmux; else sudo apt-get update -q && sudo apt-get install -y -q tmux; fi
+          if [ "$RUNNER_OS" = macOS ]; then brew install tmux; else sudo apt-get update -q && sudo apt-get install -y -q tmux zsh procps; fi
           tmux -V
+          command -v ps
       - name: gofmt
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
+      # A missing tmux fails the tmux suites instead of skipping them.
       - run: go test ./...
+        env:
+          STUI_REQUIRE_TMUX: "1"

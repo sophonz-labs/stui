@@ -96,7 +96,9 @@ func TestTmuxCloseWindow(t *testing.T) {
 		t.Fatalf("view: %v %s", err, out)
 	}
 	// A window running something, the way a shell would after a command.
-	if out, err := exec.Command(tm.bin, "new-window", "-d", "-t", "=closing:", "sleep 30").CombinedOutput(); err != nil {
+	// exec: dash (Ubuntu's /bin/sh) forks rather than execs the last command
+	// of `sh -c`, and tmux would then name the pane's process "sh".
+	if out, err := exec.Command(tm.bin, "new-window", "-d", "-t", "=closing:", "exec sleep 30").CombinedOutput(); err != nil {
 		t.Fatalf("new-window: %v %s", err, out)
 	}
 	wins := tm.ListWindows(ctx, "closing", "abc")
