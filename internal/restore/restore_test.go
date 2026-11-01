@@ -32,8 +32,12 @@ func sandbox(t *testing.T) Exec {
 	}
 	sock := filepath.Join(dir, "s")
 	// No zsh new-user wizard (Debian's zsh): it reads in cooked mode and
-	// fills the screen, over a restored pane's note.
-	os.WriteFile(filepath.Join(dir, ".zshrc"), nil, 0o644)
+	// fills the screen, over a restored pane's note. A short prompt: the
+	// system zshrc's names the host, which on a CI runner is long enough to
+	// wrap a typed line. No global compinit (Debian's /etc/zsh/zshrc): on a
+	// runner it asks about insecure directories and eats typed keys.
+	os.WriteFile(filepath.Join(dir, ".zshrc"), []byte("PS1='%# '\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".zshenv"), []byte("skip_global_compinit=1\n"), 0o644)
 	x := Exec{
 		Bin:    bin,
 		Prefix: []string{"-f", "/dev/null", "-S", sock},
