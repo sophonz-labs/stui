@@ -329,17 +329,22 @@ func TestCreateSessionAfterStartDirDeleted(t *testing.T) {
 	// The guard runs in the pane after new-session returns; give its cd a
 	// moment rather than read the directory it is about to leave.
 	homeReal, _ := filepath.EvalSymlinks(home)
+	// tmux 3.4 (Ubuntu's) starts the pane in the client's directory, this
+	// test's, and never strands it; newer tmux strands it and the guard
+	// sends it home. Either is a directory that exists -- `gone` is not.
+	wd, _ := os.Getwd()
+	wdReal, _ := filepath.EvalSymlinks(wd)
 	var cwd string
 	for deadline := time.Now().Add(3 * time.Second); ; time.Sleep(50 * time.Millisecond) {
 		if cwd, ok = paneCwd(pid); !ok {
 			t.Skip("could not read the pane's cwd on this platform")
 		}
-		if real, _ := filepath.EvalSymlinks(cwd); real == homeReal || time.Now().After(deadline) {
+		if real, _ := filepath.EvalSymlinks(cwd); real == homeReal || real == wdReal || time.Now().After(deadline) {
 			break
 		}
 	}
-	if real, _ := filepath.EvalSymlinks(cwd); real != homeReal {
-		t.Errorf("pane cwd = %s, want home (%s)", cwd, home)
+	if real, _ := filepath.EvalSymlinks(cwd); real != homeReal && real != wdReal {
+		t.Errorf("pane cwd = %s, want home (%s) or the client's directory (%s)", cwd, home, wd)
 	}
 }
 

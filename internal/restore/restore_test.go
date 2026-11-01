@@ -32,8 +32,12 @@ func sandbox(t *testing.T) Exec {
 	}
 	sock := filepath.Join(dir, "s")
 	// No zsh new-user wizard (Debian's zsh): it reads in cooked mode and
-	// fills the screen, over a restored pane's note.
-	os.WriteFile(filepath.Join(dir, ".zshrc"), nil, 0o644)
+	// fills the screen, over a restored pane's note. A short prompt: the
+	// system zshrc's names the host, which on a CI runner is long enough to
+	// wrap a typed line. No global compinit (Debian's /etc/zsh/zshrc): on a
+	// runner it asks about insecure directories and eats typed keys.
+	os.WriteFile(filepath.Join(dir, ".zshrc"), []byte("PS1='%# '\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".zshenv"), []byte("skip_global_compinit=1\n"), 0o644)
 	x := Exec{
 		Bin:    bin,
 		Prefix: []string{"-f", "/dev/null", "-S", sock},
@@ -182,9 +186,16 @@ func TestSnapshotKillRestore(t *testing.T) {
 			agentID = strings.TrimPrefix(l, "1 ")
 		}
 	}
-	waitFor(t, "the typed resume line", func() bool {
-		return strings.Contains(must(t, x, "capture-pane", "-p", "-t", agentID), "claude --resume be3612de-d629")
-	})
+	for i := 0; ; i++ {
+		screen := must(t, x, "capture-pane", "-p", "-t", agentID)
+		if strings.Contains(screen, "claude --resume be3612de-d629") {
+			break
+		}
+		if i == 50 {
+			t.Fatalf("timed out waiting for the typed resume line; screen:\n%s", screen)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 	// Once: typed when the shell's editor is up, not echoed by the
 	// terminal first and drawn again by the editor.
 	time.Sleep(time.Second)
