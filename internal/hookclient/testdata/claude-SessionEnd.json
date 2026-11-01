@@ -1,0 +1,9 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "scratchpad_dir": "/redacted",
+  "prompt_id": "6f3128c5-622c-47e6-a077-3992d5f7fdef",
+  "hook_event_name": "SessionEnd",
+  "reason": "prompt_input_exit"
+}

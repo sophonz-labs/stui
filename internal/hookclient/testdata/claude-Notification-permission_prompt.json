@@ -1,0 +1,10 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "scratchpad_dir": "/redacted",
+  "prompt_id": "45bc4758-00e2-4b08-bc9a-f91a44e46a95",
+  "hook_event_name": "Notification",
+  "message": "Claude needs your permission",
+  "notification_type": "permission_prompt"
+}

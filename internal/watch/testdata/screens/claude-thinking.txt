@@ -1,0 +1,40 @@
+
+  If I need to stop working, that hook will run before the session ends. Thanks for the heads-up!
+
+✻ Crunched for 4s · done 9:27 PM
+
+❯ Launch one background subagent with the Agent tool (run_in_background: true, subagent_type general-purpose) whose
+  task is: run the Bash command sleep 25 and then report "ok". After launching it, end your turn immediately with the
+  single word: launched. When it completes, summarize its result in two sentences.
+
+⏺ Agent(Sleep 25 seconds and report completion)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+⏺ launched
+
+✻ Waiting for 1 background agent to finish
+
+⏺ Agent "Sleep 25 seconds and report completion" finished · 6s
+
+⏺ The background agent is still waiting for its sleep command to complete—it hasn't reported "ok" yet. I'll let you know
+  once it finishes.
+
+✻ Crunched for 13s · done 9:29 PM
+
+⏺ Agent "Sleep 25 seconds and report completion" finished · 31s
+
+⏺ The background agent completed successfully after sleeping for 25 seconds. It reported "ok" as requested, confirming
+  the task finished without errors.
+
+✻ Cooked for 1s · done 9:30 PM
+
+❯ Think briefly, then run the bash command sleep 8 with the Bash tool (foreground), then reply with one short sentence.
+
+✻ Thinking… (1s · thinking)
+  ⎿  Tip: Run /ultrareview for a cloud-based multi-agent review that finds and verifies bugs in your branch — 3 free
+     reviews left
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

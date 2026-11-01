@@ -1,0 +1,7 @@
+stui
+Copyright 2026 sophonz-labs
+
+Portions of internal/chat, internal/usage and internal/watch are derived from
+Orca (https://github.com/stablyai/orca), MIT License,
+Copyright (c) 2026 Lovecast Inc. The full license text is in
+internal/chat/notice.go and is printed by GET /api/chat/notice.

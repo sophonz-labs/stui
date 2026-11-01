@@ -1,0 +1,22 @@
+OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter> windows                  _ _|_     o
+Mux:   tmux 3.8                         Guard:  off                                     <p> panes                       _>  |_ |_| |
+Panes: 7 in 3 sessions                                                                  <a> attach                               dev
+CI:    1 failed                                                                         <n> new
+                                                                                        <ctrl-d> kill
+                                                                                        <1> sessions
+┌─────────────────────────────────────────────────── Sessions(this machine)[3] ────────────────────────────────────────────────────┐
+│ NAME  WINDOWS AGENTS STATE               ATTACHED AGE CURRENT WINDOW                                                             │
+│ notes 1                                  0        28s edit                                                                       │
+│ ui *  1                                  0        16s stui                                                                       │
+│ work  5       4      1 asking, 1 working 0        28s shell                                                                      │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ <sessions>

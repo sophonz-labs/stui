@@ -1,0 +1,12 @@
+
+
+
+
+
+
+[1;7m› /status      [0;7mshow current session configuration and token usage[1m
+[0m  /[1mstat[0musline  [2mconfigure which items appear in the status line[0m
+
+[1m›[0m /stat
+
+  [38;2;246;226;183mgpt-model default[39m · [38;2;171;223;167m~/project[39m

@@ -1,0 +1,8 @@
+// Config stui starts zellij with.
+//
+// On a touch screen there is no way to dismiss a modal that has taken the keyboard, and
+// zellij's first-run "About Zellij" popup does exactly that: it swallows every
+// keystroke, so the shell never sees any input at all. Both notices are turned
+// off here rather than left for the user to discover.
+show_startup_tips false
+show_release_notes false

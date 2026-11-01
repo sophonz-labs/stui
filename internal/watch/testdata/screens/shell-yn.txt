@@ -1,0 +1,5 @@
+$ apt remove foo
+Reading package lists... Done
+The following packages will be REMOVED:
+  foo
+Do you want to continue? [Y/n]

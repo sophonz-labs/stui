@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.283
+▝▜██████▀  Haiku 4.5 · Claude Max
+ ▝▝   ▝▝   /private/tmp/aw/proj
+
+  Get to finished work sooner with Opus 5.5. Switch anytime with /model.
+  1 more notice hidden
+
+❯ Say hi in one word.
+
+⏺ Hey!
+
+⏺ Ran 2 stop hooks
+  ⎿  Stop hook error: [/private/tmp/aw
+  /aw/blockstop.sh]: Before stopping, run the Bash command `sleep 6` and then write a 4-line poem about
+  rivers.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+✽ Baking… (1s · ↓ 50 tokens · thinking)
+                                                                              Stop hook error occurred · ctrl+o to see
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [custom] | 5h:33% | ctx:2%
+  ⏸ manual mode on · ← for agents

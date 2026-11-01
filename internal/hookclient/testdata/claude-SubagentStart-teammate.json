@@ -1,0 +1,8 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "hook_event_name": "SubagentStart",
+  "agent_id": "researcher@session-be3612de",
+  "agent_type": "general-purpose"
+}

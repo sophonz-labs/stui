@@ -1,0 +1,8 @@
+❯ Say hi.
+⏺ Hi! 👋 I'm Claude Code, ready to help with your software engineering tasks. What would you like to work on today?
+✳ Newspapering… (running Stop hooks… 1/2 · 1s · ↓ 75 tokens · thinking)
+                     tmux detected · scroll with PgUp/PgDn · or add 'set -g mouse on' to ~/.tmux.conf for wheel scroll
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

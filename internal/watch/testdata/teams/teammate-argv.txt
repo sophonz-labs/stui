@@ -1,0 +1,1 @@
+/Users/me/.local/share/claude/versions/2.1.288 --agent-id researcher@session-be3612de --agent-name researcher --team-name session-be3612de --agent-color blue --parent-session-id be3612de-d629-4413-9df3-2094e60bda57 --agent-type Explore --dangerously-skip-permissions

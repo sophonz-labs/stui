@@ -1,0 +1,37 @@
+{
+  "name": "session-be3612de",
+  "createdAt": 1790000000000,
+  "leadAgentId": "team-lead@session-be3612de",
+  "leadSessionId": "be3612de-d629-4413-9df3-2094e60bda57",
+  "members": [
+    {
+      "agentId": "team-lead@session-be3612de",
+      "name": "team-lead",
+      "agentType": "team-lead",
+      "joinedAt": 1790000000000,
+      "tmuxPaneId": "leader",
+      "cwd": "/redacted",
+      "subscriptions": [],
+      "backendType": "in-process"
+    },
+    {
+      "agentId": "researcher@session-be3612de",
+      "name": "researcher",
+      "agentType": "Explore",
+      "joinedAt": 1790000060000,
+      "tmuxPaneId": "%3",
+      "cwd": "/redacted",
+      "subscriptions": [],
+      "backendType": "tmux"
+    },
+    {
+      "agentId": "tester@session-be3612de",
+      "name": "tester",
+      "joinedAt": 1790000061000,
+      "tmuxPaneId": "in-process",
+      "cwd": "/redacted",
+      "subscriptions": [],
+      "backendType": "in-process"
+    }
+  ]
+}

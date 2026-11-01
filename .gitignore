@@ -1,0 +1,4 @@
+/stui
+/dist/
+*.test
+.DS_Store

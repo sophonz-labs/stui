@@ -1,0 +1,21 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "scratchpad_dir": "/redacted",
+  "prompt_id": "c1682426-baef-4c40-96f0-79778a4fdece",
+  "permission_mode": "default",
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "/private/tmp/aw/proj/notes.md",
+    "content": "hello world"
+  },
+  "permission_suggestions": [
+    {
+      "type": "setMode",
+      "mode": "acceptEdits",
+      "destination": "session"
+    }
+  ]
+}

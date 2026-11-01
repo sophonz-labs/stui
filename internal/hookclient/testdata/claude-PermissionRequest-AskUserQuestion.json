@@ -1,0 +1,33 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "scratchpad_dir": "/redacted",
+  "prompt_id": "f4bc11dd-80cf-4157-a6ca-96283e74e6a3",
+  "permission_mode": "default",
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "AskUserQuestion",
+  "tool_input": {
+    "questions": [
+      {
+        "question": "Which color do you prefer for the logo?",
+        "header": "Logo Color",
+        "options": [
+          {
+            "label": "Red",
+            "description": "Bold and energetic, conveys passion, urgency, and power"
+          },
+          {
+            "label": "Green",
+            "description": "Fresh and natural, represents growth, balance, and trust"
+          },
+          {
+            "label": "Blue",
+            "description": "Calm and professional, symbolizes stability, reliability, and confidence"
+          }
+        ],
+        "multiSelect": false
+      }
+    ]
+  }
+}

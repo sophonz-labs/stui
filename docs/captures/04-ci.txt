@@ -1,0 +1,22 @@
+OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter/o> open in…               _ _|_     o
+Mux:   tmux 3.8                         Guard:  off                                     <1> sessions                    _>  |_ |_| |
+Panes: 7 in 3 sessions                                                                  <2> agents                               dev
+CI:    1 failed                                                                         <3> orch
+                                                                                        <4> ci
+                                                                                        <5> usage
+┌───────────────────────────────────────────────────── CI(GitHub Actions)[3] ──────────────────────────────────────────────────────┐
+│ REPO        BRANCH WORKFLOW STATE   UPDATED TITLE                          PANES                                                 │
+│ acme/parser main   ci       running 1m      parser: accept trailing commas %0 %1 %2 %5 %6                                        │
+│ acme/parser main   lint     failed  4m      parser: accept trailing commas %0 %1 %2 %5 %6                                        │
+│ acme/parser main   release  passed  3h      v0.4.1                         %0 %1 %2 %5 %6                                        │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ <ci>

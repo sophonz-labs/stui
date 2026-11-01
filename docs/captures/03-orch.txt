@@ -1,0 +1,22 @@
+OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <←/→> fold                       _ _|_     o
+Mux:   tmux 3.8                         Guard:  off                                     <enter> output                  _>  |_ |_| |
+Panes: 7 in 3 sessions                                                                  <a> attach to it                         dev
+CI:    1 failed                                                                         <r> read
+                                                                                        <d> diff
+                                                                                        <ctrl-d> stop
+┌───────────────────────────────────────────────────── Orchestration(runs)[2] ─────────────────────────────────────────────────────┐
+│ NAME          PANE AGENT  STATE     TURN WHERE  SUMMARY                                                                          │
+│ ▾ r-b0d23594              0 working             1 panes                                                                          │
+│  └─ ● tests ✓ %5   claude done      24s  work:4 parser tests pass: go test ./internal/parse/ ok (3 tests)                        │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+│                                                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ <orchestration>

@@ -1,0 +1,12 @@
+⏺ Here is what I found:
+
+  1. The build script is stale
+  2. The tests are flaky
+  3. The README is out of date
+
+✻ Worked for 12s · done 1:40 PM
+
+────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ← for agents

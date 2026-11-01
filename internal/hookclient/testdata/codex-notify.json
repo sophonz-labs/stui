@@ -1,0 +1,1 @@
+{"type":"agent-turn-complete","thread-id":"t1","turn-id":"12345","cwd":"/tmp/proj","input-messages":["Rename foo to bar"],"last-assistant-message":"Renamed foo to bar and updated tests."}

@@ -1,0 +1,9 @@
+{"timestamp":"2026-01-02T04:00:00.700Z","type":"session_meta","payload":{"id":"0199aaaa-0000-7000-8000-000000000001","timestamp":"2026-01-02T04:00:01.400Z","cwd":"/home/dev/project","originator":"codex_cli_rs","cli_version":"0.46.0","instructions":null}}
+{"timestamp":"2026-01-02T04:00:02.100Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<user_instructions>\nfixture\n</user_instructions>"}]}}
+{"timestamp":"2026-01-02T04:00:02.800Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"What is in src?"}]}}
+{"timestamp":"2026-01-02T04:00:03.500Z","type":"event_msg","payload":{"type":"user_message","message":"What is in src?","kind":"plain"}}
+{"timestamp":"2026-01-02T04:00:04.200Z","type":"response_item","payload":{"type":"reasoning","summary":[],"content":null,"encrypted_content":"ZW5j"}}
+{"timestamp":"2026-01-02T04:00:04.900Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"command\": [\"bash\", \"-lc\", \"ls src\"], \"workdir\": \"/home/dev/project\"}","call_id":"call_a"}}
+{"timestamp":"2026-01-02T04:00:05.600Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_a","output":"main.go\nutil.go\n"}}
+{"timestamp":"2026-01-02T04:00:06.300Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Two files: main.go and util.go."}]}}
+{"timestamp":"2026-01-02T04:00:07.000Z","type":"event_msg","payload":{"type":"agent_message","message":"Two files: main.go and util.go."}}

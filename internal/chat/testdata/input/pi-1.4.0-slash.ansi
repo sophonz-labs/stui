@@ -1,0 +1,40 @@
+
+
+ [2;3mThe user wants me to run a bash command that waits for 30 seconds. I'll use the bash tool with
+[0m [2;3mappropriate timeout settings.[0m
+
+
+ [1m$ sleep 30[0;2m (timeout 45s)
+
+[0m [2mCommand aborted[0m
+
+ [2mTook 4.3s[0m
+
+
+ [38;5;1mError: This operation was aborted[39m
+
+
+ Run "sleep 20" with bash.
+
+
+ [2;3mThe previous sleep command was aborted, likely due to timeout. Let me try again with a shorter
+[0m [2;3mtimeout.[0m
+
+
+ [1m$ sleep 20[0;2m (timeout 35s)
+
+[0m [2mCommand aborted[0m
+
+ [2mTook 4.9s[0m
+
+
+ [38;5;1mError: This operation was aborted[39m
+
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────
+[0m/mo[7m [0m
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────
+[0m[38;5;5m→ model          <provider/model> — Select model (opens selector UI)[39m
+  scoped-models[2m  Enable/disable models for Ctrl+P cycling[0m
+  import[2m         Import and resume a session from a JSONL file[0m
+[2m/tmp/work (main)[0m
+[2m↑3.0k ↓1.5k R27k 2.2%/128k (auto)                                                         qwen3.5:9b

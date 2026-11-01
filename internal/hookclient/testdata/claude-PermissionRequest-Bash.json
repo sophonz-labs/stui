@@ -1,0 +1,23 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "scratchpad_dir": "/redacted",
+  "prompt_id": "45bc4758-00e2-4b08-bc9a-f91a44e46a95",
+  "permission_mode": "default",
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "echo hello > greeting.txt && ls -la",
+    "description": "Create greeting.txt and list directory contents"
+  },
+  "permission_suggestions": [
+    {
+      "type": "addDirectories",
+      "directories": [
+        "/private/tmp/aw/proj"
+      ],
+      "destination": "session"
+    }
+  ]
+}

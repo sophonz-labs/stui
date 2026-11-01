@@ -1,0 +1,16 @@
+{
+  "session_id": "be3612de-d629-4413-9df3-2094e60bda57",
+  "prompt_id": "45bc4758-00e2-4b08-bc9a-f91a44e46a95",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Agent",
+  "tool_input": {
+    "description": "Find API endpoints",
+    "prompt": "REDACTED: the task the subagent is given, which st never keeps",
+    "subagent_type": "Explore",
+    "run_in_background": true
+  },
+  "tool_use_id": "toolu_01ABC123"
+}

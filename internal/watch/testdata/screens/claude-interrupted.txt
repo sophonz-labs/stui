@@ -1,0 +1,40 @@
+
+
+⏺ Agent "Sleep 25 seconds and report completion" finished · 6s
+
+⏺ The background agent is still waiting for its sleep command to complete—it hasn't reported "ok" yet. I'll let you know
+  once it finishes.
+
+✻ Crunched for 13s · done 9:29 PM
+
+⏺ Agent "Sleep 25 seconds and report completion" finished · 31s
+
+⏺ The background agent completed successfully after sleeping for 25 seconds. It reported "ok" as requested, confirming
+  the task finished without errors.
+
+✻ Cooked for 1s · done 9:30 PM
+
+❯ Think briefly, then run the bash command sleep 8 with the Bash tool (foreground), then reply with one short sentence.
+
+  Ran 1 shell command
+
+⏺ Done—the 8-second sleep completed without issues.
+
+✻ Baked for 11s · done 9:30 PM
+
+❯ Run the bash command touch perm.txt with the Bash tool.
+
+  Ran 1 shell command
+  ⎿  Interrupted · What should Claude do instead?
+
+✻ Worked for 1s · done 9:31 PM
+
+❯ Run the bash command sleep 20 with the Bash tool (foreground), then say done.
+
+  Ran 1 shell command
+  ⎿  Interrupted · What should Claude do instead?
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents

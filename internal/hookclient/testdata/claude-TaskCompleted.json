@@ -1,0 +1,12 @@
+{
+  "session_id": "0c41d7aa-5b52-4f0e-9d0e-6f3a2b9e7c11",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "permission_mode": "default",
+  "hook_event_name": "TaskCompleted",
+  "task_id": "1",
+  "task_subject": "Review the auth module",
+  "task_description": "REDACTED",
+  "teammate_name": "researcher",
+  "team_name": "session-be3612de"
+}

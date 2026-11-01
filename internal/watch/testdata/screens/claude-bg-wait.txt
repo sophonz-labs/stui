@@ -1,0 +1,40 @@
+
+✻ Crunched for 11s · done 9:31 PM · 1 shell still running
+
+❯ Launch one background subagent with the Agent tool (run_in_background: true, subagent_type general-purpose) whose
+  task is: run the Bash command sleep 30 in the foreground and then report "ok". After launching it, end your turn
+  immediately with the single word: launched.
+
+⏺ Agent(Background task: sleep and report)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+⏺ launched.
+
+✻ Waiting for 1 background agent to finish
+
+⏺ Agent "Background task: sleep and report" finished · 5s
+
+⏺ The background agent is running the sleep command. I'll wait for it to complete.
+
+✻ Brewed for 10s · done 9:32 PM · 1 shell still running
+
+❯ Launch one background subagent with the Agent tool (run_in_background: true, subagent_type general-purpose) whose
+  task is: write a 12-line poem about bridges (no tools). After launching it, end your turn immediately with the single
+  word: launched.
+
+⏺ Agent(Background task: write 12-line poem about bridges)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+⏺ launched.
+
+✻ Waiting for 1 background agent to finish
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [custom] | 5h:33% | ctx:2%
+  ⏸ manual mode on · 1 shell · ← for agents
+
+  ⏺ main
+  ◯ general-purpose  Background task: sleep and report                                             5s · ↓ 25.0k tokens
+  ◯ general-purpose  Background task: write 12-line poem about bridges                             2s · ↑ 22.6k tokens

@@ -1,0 +1,14 @@
+{
+  "session_id": "d1625bd6-2460-4066-a585-a32ede49027d",
+  "transcript_path": "/redacted",
+  "cwd": "/tmp/proj",
+  "scratchpad_dir": "/redacted",
+  "prompt_id": "100d3cf5-3e24-4aa2-8e3d-fd68dce2edb8",
+  "permission_mode": "plan",
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "ExitPlanMode",
+  "tool_input": {
+    "plan": "# Plan: Add README.md to /private/tmp/aw/proj\n\n## Context\nThe folder `/private/tmp/aw/proj` currently has no README. It contains `greeting.txt` and `notes.md` (both just sample/placeholder content) plus an `.omc` state directory. The user wants a minimal README.md with a single-line description added, no more.\n\n## Steps\n1. Confirm folder contents (done: `.omc/`, `greeting.txt`, `notes.md` — sample/placeholder files, not a real project).\n2. Create `README.md` in `/private/tmp/aw/proj` containing one line, e.g. `# proj` followed by a single-sentence description of the folder's purpose (sample/scratch files).\n3. Verify by listing the directory and reading back `README.md` to confirm it was created with the intended one-line content.\n\n## Verification\n- `ls /private/tmp/aw/proj` shows `README.md`.\n- `cat /private/tmp/aw/proj/README.md` shows exactly one description line.\n",
+    "planFilePath": "/Users/someuser/.claude/plans/plan-how-to-add-enchanted-storm.md"
+  }
+}
