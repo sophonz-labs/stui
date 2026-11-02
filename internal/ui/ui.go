@@ -12,10 +12,12 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/term"
 
+	"github.com/sophonz-labs/stui/internal/config"
 	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/state"
 )
@@ -73,6 +75,12 @@ type app struct {
 	plugins []*plugin.Plugin
 	pset    *plugin.Set
 
+	cfg      *config.Config
+	logoOn   bool         // ui.logo, until :logo says otherwise
+	headless bool         // ui.headless, likewise
+	rate     atomic.Int64 // refreshRate, read by fetchLoop
+	ticks    int
+
 	snaps   chan *snap
 	refresh chan struct{}
 	later   chan func()
@@ -88,19 +96,27 @@ func Run(s *state.Agent, version string, args []string) int {
 	at := locate()
 	a := &app{c: newClient(s), at: at, ver: version, shared: at.ownSession, exe: exe, folded: map[string]bool{},
 		snaps: make(chan *snap, 1), refresh: make(chan struct{}, 1), later: make(chan func(), 16)}
-	a.loadPlugins(plugin.Dirs("stui"))
+	a.applyConfig(config.Load(config.Path("stui"), startViews))
 	a.snap = a.c.fetch(nil, false)
 	if a.snap.err != nil {
 		fmt.Fprintf(os.Stderr, "stui ui: stui's server does not answer: %v\n", a.snap.err)
 		return 1
 	}
-	a.stack = []*page{{v: rootView(firstWord(args))}}
+	start := firstWord(args)
+	if start == "" {
+		start = a.cfg.StartView
+	}
+	a.stack = []*page{{v: rootView(start)}}
 	scr, err := openScreen()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "stui ui:", err)
 		return 1
 	}
 	a.scr = scr
+	scr.mono = !a.cfg.Color
+	if n := len(a.cfg.Warnings); n > 0 {
+		a.say(fmt.Sprintf("config.yaml: %s (and %d more; :config)", a.cfg.Warnings[0], n-1), true)
+	}
 	defer scr.close()
 	go a.fetchLoop()
 	a.loop()
@@ -121,9 +137,9 @@ func (a *app) fetchLoop() {
 	for n := 1; ; n++ {
 		select {
 		case <-a.refresh:
-		case <-time.After(2 * time.Second):
+		case <-time.After(time.Duration(a.rate.Load())):
 		}
-		s := a.c.fetch(prev, n%5 == 1) // CI every 10 s, first after 2
+		s := a.c.fetch(prev, n%5 == 1) // CI every 5th time, first after one
 		prev = s
 		select {
 		case <-a.snaps: // drop one not drawn yet
@@ -167,6 +183,9 @@ func (a *app) loop() {
 			}
 			if v, ok := a.top().v.(*pluginView); ok {
 				v.tick(a)
+			}
+			if a.ticks++; a.ticks%4 == 0 && a.cfg.Changed() {
+				a.reloadConfig()
 			}
 			if w == a.w && h == a.h && !expired {
 				continue
@@ -263,7 +282,12 @@ func (a *app) normalKey(k string) {
 	case "?":
 		a.pushPager(&pager{title: "Help", scope: "keys", lines: a.helpText()})
 		return
+	case "ctrl-e":
+		a.headless = !a.headless
+		a.clear()
+		return
 	case "ctrl-r":
+		a.reloadConfig()
 		a.refreshNow()
 		if p.pg != nil && p.pg.reload != nil {
 			a.reloadPager(p.pg)
@@ -595,6 +619,19 @@ func (a *app) runCommand(text string) {
 	case words[0] == "ext":
 		a.push(pluginsView{})
 		return
+	case words[0] == "config" && len(words) == 1:
+		a.push(configView{})
+		return
+	case words[0] == "logo":
+		a.logoOn = !a.logoOn
+		a.clear()
+		a.say(fmt.Sprintf("logo %s for now; ui.logo in config.yaml keeps it", onOff(a.logoOn)), false)
+		return
+	case words[0] == "headless":
+		a.headless = !a.headless
+		a.clear()
+		a.say(fmt.Sprintf("header %s for now (ctrl-e); ui.headless in config.yaml keeps it", onOff(!a.headless)), false)
+		return
 	case a.ps().Views[words[0]] != nil:
 		a.openView(a.ps().Views[words[0]], a.context(a.top(), a.cursorRow(a.top())))
 		return
@@ -620,7 +657,7 @@ func complete(in string, extra ...string) string {
 	for n := range viewNames {
 		names = append(names, n)
 	}
-	names = append(names, "windows", "panes", "help", "quit", "ext")
+	names = append(names, "windows", "panes", "help", "quit", "ext", "config", "logo", "headless")
 	names = append(names, extra...)
 	names = append(names, stCommands...)
 	var hits []string
@@ -699,12 +736,12 @@ func (a *app) visibleRows(p *page) []row {
 }
 
 // headerRows is 6, or 9 for the whole logo and the version under it when
-// the terminal is tall enough and the keys leave it room.
+// the terminal is tall enough and the keys leave it room; 0 headless.
 func (a *app) headerRows() int {
-	if a.h < 16 {
+	if a.h < 16 || a.headless {
 		return 0
 	}
-	if a.h >= 40 {
+	if a.logoOn && a.h >= logoTall {
 		c1, c2 := headerCols(a.w)
 		if _, _, room := a.keys(a.w, 9, c1, c2); room >= Cells(logoRows[0]) {
 			return 9
@@ -819,7 +856,11 @@ func (a *app) header(w, n int) []string {
 
 	hints, cols, room := a.keys(w, n, c1, c2)
 	colW := keyColW
-	logo, logoW := logoLines(a.ver, room, n)
+	var logo []string
+	logoW := 0
+	if a.logoOn {
+		logo, logoW = logoLines(a.ver, room, n)
+	}
 	out := make([]string, n)
 	for i := range n {
 		line := ""
@@ -1022,7 +1063,7 @@ func (a *app) footer() string {
 func (a *app) helpText() []string {
 	out := []string{
 		"stui ui: this machine's tmux sessions, windows, panes and agents, their GitHub",
-		"Actions and the agents' limits. Everything refreshes every 2 seconds, CI every 10.",
+		fmt.Sprintf("Actions and the agents' limits. Everything refreshes every %s, CI every fifth time.", a.conf().RefreshRate),
 		"",
 		"VIEWS (:name, or the digit)",
 	}
@@ -1036,13 +1077,16 @@ func (a *app) helpText() []string {
 		"  j k ↑ ↓     up and down        g G     top and bottom",
 		"  ctrl-b ctrl-f  a page          enter   into the row (sessions > windows > panes > output)",
 		"  esc         back (or clear the filter)       q   back, quit at the top",
-		"  /           filter the rows    ctrl-r  read everything again now",
+		"  /           filter the rows    ctrl-r  read everything again now, config.yaml too",
+		"  ctrl-e      the header on and off",
 		"",
 		"COMMANDS",
 		"  :<view>     switch to a view (tab completes)",
 		"  :<stui command>  run it with this terminal, then come back: :worker list,",
 		"              :orch ls, :hooks status — whatever stui does. :stui <command> works too",
 		"  :ext        the plugins: other CLIs' views and keys (stui ext --help)",
+		"  :config     the settings in effect and where each comes from (stui config edit)",
+		"  :logo  :headless   the logo, the whole header, on or off for now (ctrl-e: the header)",
 		"  :q          quit (or ctrl-c)",
 		"",
 		"ATTACHING",
@@ -1061,5 +1105,5 @@ func (a *app) helpText() []string {
 		}
 		out = append(out, "")
 	}
-	return append(out, a.pluginHelp()...)
+	return append(append(out, a.pluginHelp()...), a.configHelp()...)
 }

@@ -127,7 +127,7 @@ func TestRenderFits(t *testing.T) {
 	views := []view{sessionsView{}, windowsView{session: "default"}, panesView{session: "default"}, agentsView{}, orchView{}, ciView{}, ciView{pane: "%0"}, usageView{}}
 	for _, size := range [][2]int{{40, 12}, {60, 20}, {80, 24}, {120, 30}, {200, 30}, {200, 50}} {
 		for _, v := range views {
-			a := &app{snap: s, folded: map[string]bool{}, shared: "default", ver: "v0.1.0", w: size[0], h: size[1], stack: []*page{{v: v}}}
+			a := &app{snap: s, folded: map[string]bool{}, shared: "default", ver: "v0.1.0", w: size[0], h: size[1], stack: []*page{{v: v}}, logoOn: true}
 			lines := a.render()
 			if len(lines) != size[1] {
 				t.Errorf("%T at %v: %d lines", v, size, len(lines))
@@ -137,9 +137,10 @@ func TestRenderFits(t *testing.T) {
 					t.Errorf("%T at %v: line %d is %d columns: %q", v, size, i, n, plain(l))
 				}
 			}
-			// The logo: whole at the top right of a tall, wide header, the
-			// word at the end of the top row down to 120 columns, nothing at 80.
-			whole := size[0] >= 200 && size[1] >= 40
+			// The logo: whole at the top right of a wide header from logoTall
+			// rows, the word at the end of the top row down to 120 columns,
+			// nothing at 80.
+			whole := size[0] >= 200 && size[1] >= logoTall
 			if got := a.headerRows() == 9; got != whole {
 				t.Errorf("%T at %v: header grown %v", v, size, got)
 			}

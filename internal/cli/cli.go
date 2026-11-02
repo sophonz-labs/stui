@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sophonz-labs/stui/internal/config"
 	"github.com/sophonz-labs/stui/internal/home"
 	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/proc"
@@ -52,6 +53,10 @@ Plugins
   stui ext install <name>
                       another CLI in the UI: its output as a view, its commands
                       on keys and : (stui ext --help)
+
+Settings
+  stui config edit    the UI's config.yaml: logo, header, colour, refresh rate,
+                      start view, plugins (stui config --help)
 
 stui <command> --help says more about any of them.
 `
@@ -186,6 +191,8 @@ func Run(v string, argv []string) {
 		ciCommand(a)
 	case "ext":
 		os.Exit(plugin.Main("stui", ui.Builtins(), a.after("ext"), os.Stdin, os.Stdout))
+	case "config":
+		os.Exit(config.Main("stui", ui.StartViews(), a.after("config"), os.Stdout))
 	default:
 		fmt.Print(help)
 		if cmd == "help" {

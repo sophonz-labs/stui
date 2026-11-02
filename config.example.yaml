@@ -1,0 +1,16 @@
+# stui's settings: copy to ~/.config/stui/config.yaml (or under
+# $XDG_CONFIG_HOME), or run `stui config edit`. Every key is optional;
+# these are the defaults. stui reads the file again when it changes.
+
+ui:
+  logo: true          # the logo at the header's top right
+  headless: false     # no header at all (ctrl-e toggles it)
+  color: true         # false: no colour, as NO_COLOR (which always wins)
+
+refreshRate: 2s       # how often stui reads its server again (CI every fifth time); 500ms or more
+
+startView: sessions   # the view it opens on: sessions, agents, orch, ci or usage
+
+plugins:
+  enabled: true       # false: load no plugins (stui ext)
+  disabled: []        # plugins to leave out, by name: [lazygit]

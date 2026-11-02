@@ -23,6 +23,7 @@ type screen struct {
 
 	mu     sync.Mutex // held by the reader while it waits for and reads input
 	paused bool
+	mono   bool // draw without colour
 }
 
 func openScreen() (*screen, error) {
@@ -113,6 +114,9 @@ func (s *screen) draw(lines []string) {
 		if i > 0 {
 			s.w.WriteString("\r\n")
 		}
+		if s.mono {
+			l = monochrome(l)
+		}
 		s.w.WriteString(l)
 		s.w.WriteString(reset)
 	}
@@ -127,7 +131,7 @@ var csiKeys = map[string]string{
 var ctrlKeys = map[byte]string{
 	'\r': "enter", '\n': "enter", '\t': "tab", 0x7f: "backspace", 0x08: "backspace",
 	0x03: "ctrl-c", 0x04: "ctrl-d", 0x15: "ctrl-u", 0x17: "ctrl-w", 0x02: "ctrl-b", 0x06: "ctrl-f",
-	0x12: "ctrl-r", 0x0c: "ctrl-l",
+	0x12: "ctrl-r", 0x0c: "ctrl-l", 0x05: "ctrl-e",
 }
 
 // splitKeys is the keys in one read: names for the special ones
