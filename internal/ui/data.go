@@ -13,26 +13,32 @@ import (
 	"github.com/sophonz-labs/stui/internal/state"
 )
 
-// client talks to the stui share running on this machine, as stui ls does.
+// client talks to the stui share running on this machine, as stui ls does
+// (or, read-only, to st's: stClient).
 type client struct {
 	base, token string
+	header      string // the token's header
+	readOnly    bool   // GET only
 	hc          *http.Client
 }
 
 func newClient(s *state.Agent) *client {
-	return &client{base: fmt.Sprintf("http://127.0.0.1:%d", s.Port), token: s.Token, hc: &http.Client{Timeout: 8 * time.Second}}
+	return &client{base: fmt.Sprintf("http://127.0.0.1:%d", s.Port), token: s.Token, header: state.TokenHeader, hc: &http.Client{Timeout: 8 * time.Second}}
 }
 
 // do sends a request; a reply that is not 2xx is an error with the
 // share's own words when it gave some.
 func (c *client) do(method, path string, body, out any) error {
+	if c.readOnly && method != "GET" {
+		return errReadOnly
+	}
 	var rd io.Reader
 	if body != nil {
 		b, _ := json.Marshal(body)
 		rd = bytes.NewReader(b)
 	}
 	req, _ := http.NewRequest(method, c.base+path, rd)
-	req.Header.Set(state.TokenHeader, c.token)
+	req.Header.Set(c.header, c.token)
 	if body != nil {
 		req.Header.Set("content-type", "application/json")
 	}
@@ -118,6 +124,7 @@ type agentPane struct {
 	} `json:"subagents"`
 	Title string    `json:"title"`
 	Orch  *orchInfo `json:"orch"`
+	st    bool      // st's, read from st's server (st.go)
 }
 
 type agentSession struct {
@@ -242,6 +249,7 @@ type snap struct {
 	agents   agents
 	usage    usage
 	ci       map[string]*ciInfo // by pane id
+	st       *client            // st's server, when it runs here and stui reads it (st.go)
 	err      error
 }
 
@@ -250,7 +258,7 @@ const maxCIPanes = 40
 
 // fetch reads a snapshot. CI comes from gh and changes slowly: withCI says
 // to read it this time, else it is carried over from prev.
-func (c *client) fetch(prev *snap, withCI bool) *snap {
+func (c *client) fetch(prev *snap, withCI, withST bool) *snap {
 	s := &snap{at: time.Now(), windows: map[string][]window{}, panes: map[string][]pane{}, ci: map[string]*ciInfo{}}
 	if prev != nil {
 		s.ci = prev.ci
@@ -262,6 +270,10 @@ func (c *client) fetch(prev *snap, withCI bool) *snap {
 	run(func() { c.get("/api/version", &s.version) })
 	run(func() { c.get("/api/agents", &s.agents) })
 	run(func() { c.get("/api/usage", &s.usage) })
+	var stAgents []agentPane
+	if withST {
+		run(func() { s.st, stAgents = readST() })
+	}
 	for _, x := range s.sessions {
 		q := "?session=" + url.QueryEscape(x.Name)
 		run(func() {
@@ -275,6 +287,7 @@ func (c *client) fetch(prev *snap, withCI bool) *snap {
 		})
 	}
 	wg.Wait()
+	s.mergeST(stAgents)
 	if withCI {
 		s.ci = c.fetchCI(s)
 	}

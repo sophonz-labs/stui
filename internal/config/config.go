@@ -28,6 +28,7 @@ type Config struct {
 	StartView       string        // startView
 	PluginsEnabled  bool          // plugins.enabled
 	PluginsDisabled []string      // plugins.disabled
+	STRead          bool          // st.read: show st's runs and agents, read-only, when st runs here
 
 	Path     string
 	ModTime  time.Time         // of the file read, zero when there was none
@@ -36,7 +37,7 @@ type Config struct {
 }
 
 // Keys is every key, in the order show lists them.
-var Keys = []string{"ui.logo", "ui.headless", "ui.color", "refreshRate", "startView", "plugins.enabled", "plugins.disabled"}
+var Keys = []string{"ui.logo", "ui.headless", "ui.color", "refreshRate", "startView", "plugins.enabled", "plugins.disabled", "st.read"}
 
 // MinRefresh is the shortest refreshRate: each refresh runs tmux.
 const MinRefresh = 500 * time.Millisecond
@@ -53,7 +54,7 @@ func Path(tool string) string {
 
 // Defaults is the settings without a file; views[0] is the start view.
 func Defaults(views []string) *Config {
-	c := &Config{Logo: true, Color: true, RefreshRate: 2 * time.Second, StartView: views[0], PluginsEnabled: true, Source: map[string]string{}}
+	c := &Config{Logo: true, Color: true, RefreshRate: 2 * time.Second, StartView: views[0], PluginsEnabled: true, STRead: true, Source: map[string]string{}}
 	for _, k := range Keys {
 		c.Source[k] = "default"
 	}
@@ -147,6 +148,8 @@ func (c *Config) parse(data []byte, views []string) {
 				c.PluginsDisabled, c.Source["plugins.disabled"] = names, "file"
 				return true
 			})
+		case "st":
+			section("st", v, map[string]*bool{"read": &c.STRead}, nil)
 		case "refreshRate":
 			d, err := time.ParseDuration(v.Value)
 			if v.Kind != yaml.ScalarNode || err != nil || d < MinRefresh {
@@ -183,6 +186,8 @@ func (c *Config) Value(key string) string {
 		return fmt.Sprint(c.PluginsEnabled)
 	case "plugins.disabled":
 		return "[" + strings.Join(c.PluginsDisabled, ", ") + "]"
+	case "st.read":
+		return fmt.Sprint(c.STRead)
 	}
 	return ""
 }
@@ -205,6 +210,10 @@ func Template(tool string, views []string) string {
 # plugins:
 #   enabled: true       # false: load no plugins (%[1]s ext)
 #   disabled: []        # plugins to leave out, by name: [lazygit]
+
+# st:
+#   read: true          # when st runs on this machine, show its runs and agents
+#                       # too, read-only (they are marked st)
 `, tool, views[0], strings.Join(views, ", "))
 }
 

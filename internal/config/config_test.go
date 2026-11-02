@@ -23,7 +23,7 @@ func TestDefaults(t *testing.T) {
 	t.Setenv("NO_COLOR", "")
 	os.Unsetenv("NO_COLOR")
 	c := Load(filepath.Join(t.TempDir(), "none.yaml"), views)
-	if !c.Logo || c.Headless || !c.Color || c.RefreshRate != 2*time.Second || c.StartView != "sessions" || !c.PluginsEnabled || len(c.Warnings) != 0 {
+	if !c.Logo || c.Headless || !c.Color || c.RefreshRate != 2*time.Second || c.StartView != "sessions" || !c.PluginsEnabled || !c.STRead || len(c.Warnings) != 0 {
 		t.Errorf("defaults: %+v", c)
 	}
 	if c.Source["ui.logo"] != "default" {
@@ -33,8 +33,8 @@ func TestDefaults(t *testing.T) {
 
 func TestFile(t *testing.T) {
 	os.Unsetenv("NO_COLOR")
-	c := load(t, "ui:\n  logo: false\n  headless: true\nrefreshRate: 5s\nstartView: orch\nplugins:\n  disabled: [lazygit, gh-prs]\n")
-	if c.Logo || !c.Headless || c.RefreshRate != 5*time.Second || c.StartView != "orch" || !c.Disabled("lazygit") || c.Disabled("git-status") || len(c.Warnings) != 0 {
+	c := load(t, "ui:\n  logo: false\n  headless: true\nrefreshRate: 5s\nstartView: orch\nplugins:\n  disabled: [lazygit, gh-prs]\nst:\n  read: false\n")
+	if c.STRead || c.Logo || !c.Headless || c.RefreshRate != 5*time.Second || c.StartView != "orch" || !c.Disabled("lazygit") || c.Disabled("git-status") || len(c.Warnings) != 0 {
 		t.Errorf("file: %+v", c)
 	}
 	if c.Source["ui.logo"] != "file" || c.Source["ui.color"] != "default" {

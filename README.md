@@ -41,7 +41,16 @@ Text captures of each screen are in [docs/captures](docs/captures).
 
 ## Without st / with st
 
-stui needs no st, no account and no relay: install it, run `stui`, and everything above works on this machine alone. If you use st, use `st ui` instead; it is the same screen with your other machines in it. The two keep separate state (`~/.stui` here) and do not read each other's runs, so a run started with `st` shows in `st ui`, not in stui.
+stui needs no st, no account and no relay: install it, run `stui`, and everything above works on this machine alone. The two keep separate state (`~/.stui` here, `~/.sophonz` for st).
+
+When st runs on the same machine, stui shows st's runs and agents too, **read-only**: it asks st's local server (the address and token in `~/.sophonz/agent.json`, on 127.0.0.1 only, GET only) at every refresh. st's runs are marked `(st)` in the orchestration tree and the agents' ORCH column. A pane both see (the same tmux pane) is listed once, with st's record, since st knows the run it is in.
+
+- Reading works on st's rows: `enter` (output), `a` (attach), `c` and `o` (CI), `y` (copy), and `r` and `d`, which run st's own `st worker read` and `st worker diff`.
+- Changing does not: `ctrl-d` on one of st's workers says `this is st's run: use st ui`. A run belongs to the tool whose coordinator started it.
+- When st's server is not running, or does not answer within a second, stui shows only its own.
+- `st.read: false` in config.yaml turns it off. `STUI_ST_HOME` points at another st state directory (default `$SOPHONZ_HOME`, else `~/.sophonz`).
+
+Other machines stay `st ui`'s: stui is this machine only.
 
 ## Install
 
@@ -96,8 +105,20 @@ stui --help
 | `:` | everywhere | a view, `:ext`, `:config`, or any stui command: `:worker list`, `:orch history` |
 | `ctrl-r` | everywhere | refresh now, and read config.yaml again (it refreshes every 2 seconds, CI every fifth time) |
 | `ctrl-e` | everywhere | the header on and off |
+| `y` | lists | copy the row's value: a session's name, `session:index` for a window, a pane's id, a run's name, a CI run's URL, a plugin row's `url` (else its id) |
+| `Y` | lists | copy the whole row, tab-separated |
+| `v` | output | select lines, from the bottom one on screen; `j` `k` `g` `G` extend the selection |
+| `y` | output | copy the selection, or with none the whole output (every line, not only those on screen) |
+| `z` | output | the output alone on the screen, no frame, for your terminal's own mouse selection; `esc` comes back |
 
 States: `working` is teal, `asking` (the agent waits for a person) is orange, `idle` and `done` are plain.
+
+### Copying
+
+The screen belongs to stui, so a mouse selection takes the frame and the columns with it. `y`, `Y` and `v` copy only the content, as plain text (no colours, no trailing spaces). The text goes out two ways at once:
+
+- **The terminal's clipboard.** Outside tmux, stui writes OSC 52, which also crosses ssh (iTerm2, kitty, WezTerm, Alacritty, Windows Terminal and foot take it; some need it allowed). Inside tmux, an application's OSC 52 only gets through with `set-clipboard on`, so stui hands the text to `tmux load-buffer -w` instead: it becomes a tmux paste buffer (`prefix ]`), and tmux sends it on to the terminal unless `set-clipboard` is `off`.
+- **This machine's clipboard,** when it has a tool for it: `pbcopy` on macOS, `wl-copy` on Wayland, `xclip` on X11, `clip.exe` in WSL.
 
 ## Attach and come back
 
@@ -191,6 +212,7 @@ stui config path
 | `startView` | `sessions` | the view it opens on: `sessions`, `agents`, `orch`, `ci` or `usage` (`stui ui <view>` still wins) |
 | `plugins.enabled` | `true` | `false` loads no plugins |
 | `plugins.disabled` | `[]` | plugins to leave out, by name |
+| `st.read` | `true` | when st runs on this machine, show its runs and agents too, read-only |
 
 [config.example.yaml](config.example.yaml) has them all. The logo needs 20 rows and the room the header's keys leave: 162 columns on the sessions, agents and orch views, 144 on ci and usage. Narrower, the header ends in a one-row `stui` and the version.
 
