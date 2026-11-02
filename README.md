@@ -49,7 +49,7 @@ stui needs no st, no account and no relay: install it, run `stui`, and everythin
 curl -fsSL https://dl.sophonz.io/stui/install.sh | sh
 ```
 
-It puts `stui` in `~/.local/bin` after checking its SHA-256 (`STUI_INSTALL_DIR` puts it elsewhere, `STUI_VERSION=v0.1.0` pins a release). With Go:
+It puts `stui` in `~/.local/bin` after checking its SHA-256 (`STUI_INSTALL_DIR` puts it elsewhere, `STUI_VERSION=v0.1.0` pins a release). `stui upgrade` replaces it with the latest release the same way and restarts the background server on it (`--check` only says whether there is one, `--version vX.Y.Z` installs that one). With Go:
 
 ```sh
 go install github.com/sophonz-labs/stui@latest

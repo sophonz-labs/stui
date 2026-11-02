@@ -20,6 +20,7 @@ import (
 	"github.com/sophonz-labs/stui/internal/proc"
 	"github.com/sophonz-labs/stui/internal/state"
 	"github.com/sophonz-labs/stui/internal/ui"
+	"github.com/sophonz-labs/stui/internal/upgrade"
 )
 
 const help = `stui — tmux, its coding agents and their CI, in one terminal UI
@@ -29,6 +30,8 @@ const help = `stui — tmux, its coding agents and their CI, in one terminal UI
   stui stop           stop the background server (the UI starts it again)
   stui status         whether the server is running, and the agents' hooks
   stui version        print the version
+  stui upgrade        replace stui with the latest release, and restart its
+                      server (--check only reports, --version vX.Y.Z pins)
 
 Coding agents
   stui hooks install  have the coding agents here report their turns to stui,
@@ -146,7 +149,8 @@ var version string
 func Run(v string, argv []string) {
 	version = v
 	a := args(argv)
-	if a.has("--version") || a.has("-v") {
+	// stui upgrade --version vX.Y.Z is a pin, not a question.
+	if (a.has("--version") || a.has("-v")) && a.command() != "upgrade" {
 		fmt.Println(version)
 		return
 	}
@@ -165,6 +169,8 @@ func Run(v string, argv []string) {
 		os.Exit(ui.Run(ensureServer(), version, a.after("ui")))
 	case "version":
 		fmt.Println(version)
+	case "upgrade":
+		upgradeCommand(a.after("upgrade"))
 	case "stop", "exit":
 		stopServer()
 	case "status":
@@ -276,6 +282,26 @@ func stopServer() {
 	}
 	state.Clear()
 	fmt.Printf("  %sstopped%s\n", dim, reset)
+}
+
+// upgradeCommand replaces the binary, then the server it left running, which
+// is still the old one. Stopping it leaves tmux and every agent in it alone.
+func upgradeCommand(argv []string) {
+	tag, code := upgrade.Main("stui", version, argv, os.Stdout)
+	if tag == "" {
+		os.Exit(code)
+	}
+	s := state.Running()
+	if s == nil || s.Version == tag {
+		return
+	}
+	fmt.Printf("\nrestarting the server (pid %d, %s) on %s\n", s.PID, firstOf(s.Version, "an older stui"), tag)
+	stopServer()
+	if n := ensureServer(); n.Version != tag {
+		fmt.Fprintf(os.Stderr, "stui: the server came back as %s, not %s; see %s\n", firstOf(n.Version, "an unknown version"), tag, logFile())
+		os.Exit(1)
+	}
+	fmt.Printf("  %sserver running %s%s\n", dim, tag, reset)
 }
 
 func status() {
