@@ -87,7 +87,7 @@ stui --help
 | `n` | sessions, windows | new session; new window, optionally with an agent |
 | `ctrl-d` | sessions, windows, orch | kill or stop (asks first) |
 | `r` `d` | orch | read a worker's answer, its diff |
-| `:` | everywhere | a view, or any stui command: `:worker list`, `:orch history` |
+| `:` | everywhere | a view, `:ext`, or any stui command: `:worker list`, `:orch history` |
 | `ctrl-r` | everywhere | refresh now (it refreshes every 2 seconds, CI every 10) |
 
 States: `working` is teal, `asking` (the agent waits for a person) is orange, `idle` and `done` are plain.
@@ -143,6 +143,27 @@ stui usage poll on
 ```
 
 An API-key login has no plan limits, so there is nothing to show for it.
+
+## Plugins
+
+A plugin brings another CLI in: its output as a view in stui's table, and its commands on keys and on the `:` line. Plugins are JSON files; the format and the examples are in [tui-plugins](https://github.com/sophonz-labs/tui-plugins), whose [SPEC.md](https://github.com/sophonz-labs/tui-plugins/blob/main/SPEC.md) is the full reference. tmui reads the same files.
+
+```sh
+stui ext install gh-prs       # from tui-plugins; prints every command it will run and asks first
+stui ext install ./my-plugin  # a directory with a plugin.json, or a path or URL to one
+stui ext list
+stui ext remove gh-prs
+```
+
+They live in `~/.config/stui/plugins/<name>/plugin.json` (or under `$XDG_CONFIG_HOME`); stui also reads `~/.config/tui-plugins/`, which it shares with tmui. With `gh-prs` installed, put the cursor on a pane (or an agent) in a GitHub repository and press `P` (or type `:prs`): its pull requests open as a table, and `o` opens the one under the cursor in the browser.
+
+- A view runs a command (as argv, no shell) and reads its output as `json`, `tsv` or `lines`. `refresh` runs it again on a timer; a failure shows in the view.
+- An action is a key on rows of plugin views or of the `sessions`, `windows` and `panes` views; a `panes` key works on the agents view too. `{field}` is a field of the row, `{session}` `{window}` `{pane}` `{pane_cwd}` `{pane_command}` the tmux row's. A placeholder fills one argument and never splits it.
+- `mode` is `background` (the last line of output goes to the status line), `foreground` (the command gets the terminal), or `popup` (a tmux popup over stui, inside tmux 3.2 or later). `confirm` asks first.
+- A command is `:name [args]`, with `{args}`.
+- stui's own keys, views and commands always win. A plugin key that meets one is left out, and `:ext` says so.
+
+`stui ext` is for the UI; `stui plugin` is something else (the orchestration skills for coding agents).
 
 ## Files
 

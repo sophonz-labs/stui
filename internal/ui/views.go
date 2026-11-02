@@ -23,6 +23,7 @@ type row struct {
 	parent string // the tree row above it, "" at the top
 	kids   bool
 	open   bool
+	vars   map[string]string // a plugin view's record, for its actions' placeholders
 }
 
 type hint struct{ key, desc string }
