@@ -15,23 +15,29 @@ A terminal UI for tmux and the coding agents running in it. It shows your sessio
 
 Everything stays on this machine. stui runs a small background server on `127.0.0.1` that watches tmux and the agents' hooks; the UI and the CLI talk to it. It makes two kinds of network call: `gh` asks GitHub for CI runs, and the usage poller asks Anthropic and OpenAI for your plan limits (see [Usage limits](#usage-limits); `stui usage poll off` stops it).
 
-```
-OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter> output                          stui
-Mux:   tmux 3.8                         Guard:  off                                     <a> attach to it                         dev
-Panes: 7 in 3 sessions                                                                  <c> its CI
-CI:    1 failed                                                                         <o> open CI run
-                                                                                        <1> sessions
-                                                                                        <2> agents
-┌──────────────────────────────────────────────────── Agents(this machine)[4] ─────────────────────────────────────────────────────┐
-│ PANE SESSION WINDOW  AGENT  STATE   TURN SUB CI       ORCH    TITLE                                                              │
-│ %2   work    2 web   claude asking  18s      ✗ failed         trailing commas in the lexer                                       │
-│ %1   work    1 api   claude working 16s      ✗ failed         fix the parser tests                                               │
-│ %3   work    3 docs  claude done    17s                       write the changelog                                                │
-│ %5   work    4 tests claude done    22s      ✗ failed tests ✓ make the parser tests pass                                         │
-│                                                                                                                                  │
-```
+## Screenshots
 
-More screens are in [docs/captures](docs/captures).
+The sessions, with the agents in each and their plan limits at the top:
+
+![stui sessions](docs/screenshots/sessions.png)
+
+The agents: which are working, which are asking, and their repository's CI:
+
+![stui agents](docs/screenshots/agents.png)
+
+An orchestration run: a coordinator and the workers it handed parts to:
+
+![stui orchestration](docs/screenshots/orch.png)
+
+GitHub Actions for the repositories the panes are in:
+
+![stui CI](docs/screenshots/ci.png)
+
+An agent's pane, waiting on a permission prompt:
+
+![stui output of an agent](docs/screenshots/output.png)
+
+Text captures of each screen are in [docs/captures](docs/captures).
 
 ## Without st / with st
 
