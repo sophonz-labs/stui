@@ -1,15 +1,11 @@
 package ui
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
-	"time"
 
-	"github.com/sophonz-labs/stui/internal/proc"
+	"github.com/sophonz-labs/tmui/pkg/clip"
 )
 
 // Copying. The screen is the alternate one and the mouse is the terminal's,
@@ -38,66 +34,12 @@ func (a *app) clip(text, what string) {
 // deliver is where clip sends the text; the tests leave the clipboard alone.
 var deliver = func(a *app, text string) {
 	if os.Getenv("TMUX") != "" {
-		// Inside tmux an application's OSC 52 reaches the outer terminal only
-		// with set-clipboard on, and tmux's default (external) drops it;
-		// wrapping it for passthrough needs allow-passthrough, off by default.
-		// load-buffer -w (tmux 3.2) hands the text to tmux, which keeps it as
-		// a paste buffer (prefix ]) and sends it on to the terminal itself.
-		go func() {
-			if tmuxBuffer(text, "-w") != nil {
-				tmuxBuffer(text) // an older tmux: the paste buffer at least
-			}
-		}()
+		go clip.Tmux(text)
 	} else if a.scr != nil {
-		a.scr.w.WriteString(osc52(text)) // written with the next frame
+		a.scr.w.WriteString(clip.OSC52(text)) // written with the next frame
 	}
-	go localClip(text)
+	go clip.Local(text)
 }
-
-// osc52 asks the terminal to put text on the system clipboard.
-func osc52(text string) string {
-	return "\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(text)) + "\x07"
-}
-
-func tmuxBuffer(text string, flags ...string) error {
-	c := exec.Command("tmux", append(append([]string{"load-buffer"}, flags...), "-")...)
-	c.Stdin = strings.NewReader(text)
-	proc.Hide(c)
-	return c.Run()
-}
-
-// localClip is this machine's clipboard tool, when it has one; a failure
-// is quiet, as OSC 52 may have done it.
-func localClip(text string) {
-	var argv []string
-	switch {
-	case runtime.GOOS == "darwin":
-		argv = []string{"pbcopy"}
-	case os.Getenv("WAYLAND_DISPLAY") != "" && onPath("wl-copy"):
-		argv = []string{"wl-copy"}
-	case os.Getenv("DISPLAY") != "" && onPath("xclip"):
-		argv = []string{"xclip", "-selection", "clipboard"}
-	case onPath("clip.exe"): // WSL
-		argv = []string{"clip.exe"}
-	default:
-		return
-	}
-	c := exec.Command(argv[0], argv[1:]...)
-	c.Stdin = strings.NewReader(text)
-	proc.Hide(c)
-	if c.Start() != nil {
-		return
-	}
-	// xclip and wl-copy stay to serve the selection; do not wait for ever.
-	done := make(chan struct{})
-	go func() { c.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-	}
-}
-
-func onPath(name string) bool { _, err := exec.LookPath(name); return err == nil }
 
 // copyRow is y (whole false) and Y (whole true) on a table row.
 func (a *app) copyRow(p *page, r *row, whole bool) {

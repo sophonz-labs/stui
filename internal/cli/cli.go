@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sophonz-labs/stui/internal/config"
 	"github.com/sophonz-labs/stui/internal/home"
-	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/proc"
 	"github.com/sophonz-labs/stui/internal/state"
 	"github.com/sophonz-labs/stui/internal/ui"
-	"github.com/sophonz-labs/stui/internal/upgrade"
+	"github.com/sophonz-labs/tmui/pkg/config"
+	"github.com/sophonz-labs/tmui/pkg/plugin"
+	"github.com/sophonz-labs/tmui/pkg/upgrade"
 )
 
 const help = `stui — tmux, its coding agents and their CI, in one terminal UI
@@ -198,7 +198,7 @@ func Run(v string, argv []string) {
 	case "ext":
 		os.Exit(plugin.Main("stui", ui.Builtins(), a.after("ext"), os.Stdin, os.Stdout))
 	case "config":
-		os.Exit(config.Main("stui", ui.StartViews(), a.after("config"), os.Stdout))
+		os.Exit(config.Main("stui", ui.StartViews(), a.after("config"), os.Stdout, ui.ConfigFlags...))
 	default:
 		fmt.Print(help)
 		if cmd == "help" {

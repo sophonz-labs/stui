@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/proc"
+	"github.com/sophonz-labs/tmui/pkg/plugin"
 )
 
 // Builtins is what a plugin cannot take: stui ui's own : commands (its
