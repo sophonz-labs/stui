@@ -277,7 +277,7 @@ func TestHeaderNamesTheModelWeekly(t *testing.T) {
 	}}}
 	a := &app{snap: s, folded: map[string]bool{}, shared: "default", ver: "v0.1.0", w: 160, h: 30, stack: []*page{{v: sessionsView{}}}}
 	head := plain(strings.Join(a.render()[:6], "\n"))
-	if !strings.Contains(head, "claude weekly") || !strings.Contains(head, "claude sonnet") {
+	if !strings.Contains(head, "claude weekly") || !strings.Contains(head, "claude weekly sonnet") {
 		t.Errorf("header does not name both weekly limits:\n%s", head)
 	}
 }
