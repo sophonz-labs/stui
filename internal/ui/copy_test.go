@@ -8,12 +8,6 @@ import (
 // The tests never touch the real clipboard.
 func init() { deliver = func(*app, string) {} }
 
-func TestOSC52(t *testing.T) {
-	if got := osc52("hi\n"); got != "\x1b]52;c;aGkK\x07" {
-		t.Fatalf("osc52: %q", got)
-	}
-}
-
 func TestCopyOutput(t *testing.T) {
 	a := testApp(80, 24, sessionsView{})
 	pg := &pager{lines: []string{"first   ", "two  ", "three", "four\t"}}

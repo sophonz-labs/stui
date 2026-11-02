@@ -6,5 +6,6 @@ Orca (https://github.com/stablyai/orca), MIT License,
 Copyright (c) 2026 Lovecast Inc. The full license text is in
 internal/chat/notice.go and is printed by GET /api/chat/notice.
 
-internal/plugin and internal/config are shared with tmui (https://github.com/sophonz-labs/tmui),
+Its config, plugin, upgrade and clipboard code is imported from tmui's pkg/
+(https://github.com/sophonz-labs/tmui),
 MIT License, Copyright (c) 2026 sophonz-labs.

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sophonz-labs/stui/internal/config"
-	"github.com/sophonz-labs/stui/internal/plugin"
+	"github.com/sophonz-labs/tmui/pkg/config"
+	"github.com/sophonz-labs/tmui/pkg/plugin"
 )
 
 // startViews are the views config.yaml's startView may name.
@@ -14,10 +14,16 @@ var startViews = []string{"sessions", "agents", "orch", "ci", "usage"}
 // StartViews is startViews, for stui config.
 func StartViews() []string { return startViews }
 
+// ConfigFlags is stui's own config keys beside the ones it shares with tmui.
+var ConfigFlags = []config.Flag{{Key: "st.read", Default: true, Template: `# st:
+#   read: true          # when st runs on this machine, show its runs and agents
+#                       # too, read-only (they are marked st)
+`}}
+
 // conf is the settings, the defaults before any were read.
 func (a *app) conf() *config.Config {
 	if a.cfg == nil {
-		a.cfg = config.Defaults(startViews)
+		a.cfg = config.Defaults(startViews, ConfigFlags...)
 	}
 	return a.cfg
 }
@@ -27,7 +33,7 @@ func (a *app) applyConfig(c *config.Config) {
 	a.cfg = c
 	a.logoOn, a.headless = c.Logo, c.Headless
 	a.rate.Store(int64(c.RefreshRate))
-	a.readST.Store(c.STRead)
+	a.readST.Store(c.Flags["st.read"])
 	if a.scr != nil {
 		a.scr.mono = !c.Color
 	}
@@ -40,7 +46,7 @@ func (a *app) reloadConfig() {
 	if a.cfg == nil || a.cfg.Path == "" {
 		return
 	}
-	c := config.Load(a.cfg.Path, startViews)
+	c := config.Load(a.cfg.Path, startViews, ConfigFlags...)
 	if c.Same(a.cfg) { // touched, or nothing new: keep this session's toggles
 		a.cfg.ModTime = c.ModTime
 		return
@@ -92,7 +98,7 @@ func (configView) header() []string { return []string{"KEY", "VALUE", "FROM"} }
 func (configView) rows(a *app) []row {
 	c := a.conf()
 	var out []row
-	for _, k := range config.Keys {
+	for _, k := range c.Keys() {
 		v, from, color := c.Value(k), c.Source[k], cAqua
 		switch {
 		case k == "ui.logo" && a.logoOn != c.Logo:
@@ -129,7 +135,7 @@ func (configView) key(a *app, k string, r *row) bool {
 func (a *app) configHelp() []string {
 	c := a.conf()
 	out := []string{"CONFIG (" + tilde(c.Path) + "; :config shows it, stui config edit changes it)"}
-	for _, k := range config.Keys {
+	for _, k := range c.Keys() {
 		out = append(out, fmt.Sprintf("  %-18s %s", k, c.Value(k)))
 	}
 	if len(c.Warnings) > 0 {

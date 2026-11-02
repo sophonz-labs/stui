@@ -17,10 +17,10 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/sophonz-labs/stui/internal/config"
-	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/proc"
 	"github.com/sophonz-labs/stui/internal/state"
+	"github.com/sophonz-labs/tmui/pkg/config"
+	"github.com/sophonz-labs/tmui/pkg/plugin"
 )
 
 type mode int
@@ -103,7 +103,7 @@ func Run(s *state.Agent, version string, args []string) int {
 	at := locate()
 	a := &app{c: newClient(s), at: at, ver: version, shared: at.ownSession, exe: exe, folded: map[string]bool{},
 		snaps: make(chan *snap, 1), refresh: make(chan struct{}, 1), later: make(chan func(), 16)}
-	a.applyConfig(config.Load(config.Path("stui"), startViews))
+	a.applyConfig(config.Load(config.Path("stui"), startViews, ConfigFlags...))
 	a.snap = a.c.fetch(nil, false, a.readST.Load())
 	if a.snap.err != nil {
 		fmt.Fprintf(os.Stderr, "stui ui: stui's server does not answer: %v\n", a.snap.err)

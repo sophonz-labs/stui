@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sophonz-labs/stui/internal/config"
+	"github.com/sophonz-labs/tmui/pkg/config"
 )
 
 func settingsApp(w, h int) *app {
 	a := &app{snap: &snap{}, folded: map[string]bool{}, ver: "v0.1.0", w: w, h: h, stack: []*page{{v: sessionsView{}}}}
-	a.applyConfig(config.Defaults(startViews))
+	a.applyConfig(config.Defaults(startViews, ConfigFlags...))
 	return a
 }
 
@@ -52,7 +52,7 @@ func TestConfigReload(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	a := settingsApp(120, 30)
-	a.applyConfig(config.Load(path, startViews))
+	a.applyConfig(config.Load(path, startViews, ConfigFlags...))
 	if !a.logoOn {
 		t.Fatal("no file: logo on")
 	}
@@ -75,5 +75,27 @@ func TestMonochrome(t *testing.T) {
 	got := monochrome(line)
 	if strings.Contains(got, "38;") || strings.Contains(got, "48;") || !strings.Contains(got, "\x1b[7mrow") || !strings.Contains(got, bold+"name") {
 		t.Errorf("%q", got)
+	}
+}
+
+// stui's config: its template and config.example.yaml read as the defaults,
+// and st.read is its own key, on unless the file says false.
+func TestStuiConfig(t *testing.T) {
+	os.Unsetenv("NO_COLOR")
+	def := config.Defaults(startViews, ConfigFlags...)
+	if !def.Flags["st.read"] {
+		t.Fatal("st.read is off by default")
+	}
+	dir := t.TempDir()
+	for name, body := range map[string]string{"template": config.Template("stui", startViews, ConfigFlags...), "off": "st:\n  read: false\n"} {
+		p := filepath.Join(dir, name+".yaml")
+		os.WriteFile(p, []byte(body), 0o644)
+		c := config.Load(p, startViews, ConfigFlags...)
+		if len(c.Warnings) != 0 || c.Same(def) != (name == "template") || c.Flags["st.read"] != (name == "template") {
+			t.Errorf("%s: %v %v", name, c.Warnings, c.Flags)
+		}
+	}
+	if c := config.Load("../../config.example.yaml", startViews, ConfigFlags...); c.ModTime.IsZero() || len(c.Warnings) != 0 || !c.Same(def) {
+		t.Errorf("config.example.yaml: %v", c.Warnings)
 	}
 }
