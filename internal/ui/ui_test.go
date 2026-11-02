@@ -125,7 +125,7 @@ func TestRenderFits(t *testing.T) {
 	}
 	s.usage.Agents = []usageAgent{{Agent: "claude", Plan: "Max", Windows: []usageWindow{{Kind: "weekly", UsedPercent: 40}}}}
 	views := []view{sessionsView{}, windowsView{session: "default"}, panesView{session: "default"}, agentsView{}, orchView{}, ciView{}, ciView{pane: "%0"}, usageView{}}
-	for _, size := range [][2]int{{40, 12}, {60, 20}, {80, 24}, {120, 30}, {200, 50}} {
+	for _, size := range [][2]int{{40, 12}, {60, 20}, {80, 24}, {120, 30}, {200, 30}, {200, 50}} {
 		for _, v := range views {
 			a := &app{snap: s, folded: map[string]bool{}, shared: "default", ver: "v0.1.0", w: size[0], h: size[1], stack: []*page{{v: v}}}
 			lines := a.render()
@@ -136,6 +136,20 @@ func TestRenderFits(t *testing.T) {
 				if n := Cells(plain(l)); n > size[0] {
 					t.Errorf("%T at %v: line %d is %d columns: %q", v, size, i, n, plain(l))
 				}
+			}
+			// The logo: whole at the top right of a tall, wide header, the
+			// word at the end of the top row down to 120 columns, nothing at 80.
+			whole := size[0] >= 200 && size[1] >= 40
+			if got := a.headerRows() == 9; got != whole {
+				t.Errorf("%T at %v: header grown %v", v, size, got)
+			}
+			for i, l := range logoRows {
+				if i < len(lines) && strings.HasSuffix(plain(lines[i]), l) != whole {
+					t.Errorf("%T at %v: logo row %d shown %v: %q", v, size, i, !whole, plain(lines[i]))
+				}
+			}
+			if word := size[0] >= 120 && !whole; word != strings.HasSuffix(plain(lines[0]), " "+logoWord) {
+				t.Errorf("%T at %v: one-row logo %v: %q", v, size, !word, plain(lines[0]))
 			}
 		}
 	}
@@ -177,17 +191,26 @@ func TestPlanAttach(t *testing.T) {
 }
 
 func TestLogo(t *testing.T) {
-	if got := logoLines("v0.1.0", logoMin-1); got != nil {
-		t.Errorf("narrow: %q", got)
+	if got, _ := logoLines("v0.1.0", 33, 9); len(got) != 2 || strings.TrimSpace(plain(got[0])) != logoWord || strings.TrimSpace(plain(got[1])) != "v0.1.0" {
+		t.Errorf("room for the word only: %q", got)
 	}
-	got := logoLines("v0.1.0", logoMin)
-	if len(got) != 3 {
-		t.Fatalf("wide: %d lines", len(got))
+	if got, _ := logoLines("v0.1.0", 3, 6); got != nil {
+		t.Errorf("no room: %q", got)
+	}
+	if got, _ := logoLines("v0.1.0", -1, 6); got != nil {
+		t.Errorf("no key column: %q", got)
+	}
+	got, w := logoLines("v0.1.0", 34, 9)
+	if len(got) != 9 || w != 34 || plain(got[0]) != logoRows[0] || plain(got[7]) != logoRows[7] || !strings.HasSuffix(plain(got[8]), "v0.1.0") {
+		t.Fatalf("whole: %q", got)
 	}
 	for _, l := range got {
-		if Cells(plain(l)) != logoWidth {
+		if Cells(plain(l)) != w {
 			t.Errorf("%q is %d columns", plain(l), Cells(plain(l)))
 		}
+	}
+	if got, _ := logoLines("v0.1.0", 34, 6); len(got) != 2 || strings.TrimSpace(plain(got[0])) != logoWord {
+		t.Errorf("a short header: %q", got)
 	}
 }
 
@@ -216,5 +239,16 @@ func TestCIState(t *testing.T) {
 	}
 	if got := ciMark(nil); got != "" {
 		t.Errorf("nil: %q", got)
+	}
+}
+
+func TestEmptyOrchSaysHowToStart(t *testing.T) {
+	a := &app{snap: &snap{}, folded: map[string]bool{}, w: 120, h: 30, stack: []*page{{v: orchView{}}}}
+	if got := strings.Join(a.render(), "\n"); !strings.Contains(plain(got), `stui orch start --objective "<goal>"`) {
+		t.Errorf("empty orchestration view:\n%s", plain(got))
+	}
+	a.stack[0].filter = "x"
+	if got := plain(strings.Join(a.render(), "\n")); !strings.Contains(got, "nothing to show") {
+		t.Errorf("filtered to nothing:\n%s", got)
 	}
 }

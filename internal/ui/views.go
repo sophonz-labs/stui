@@ -3,9 +3,14 @@ package ui
 import (
 	"fmt"
 	"net/url"
+	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/sophonz-labs/stui/internal/home"
+	stusage "github.com/sophonz-labs/stui/internal/usage"
 )
 
 // row is one line of a view's table. id is what it stands for (a session
@@ -454,6 +459,28 @@ func (orchView) rows(a *app) []row {
 	return out
 }
 
+// empty is what the view says when it has no runs: how to start one, and
+// where st's are when st is on this machine (stui does not read them).
+func (orchView) empty(*app) []string {
+	out := []string{
+		"No runs yet. In an agent's pane:",
+		`  stui orch start --objective "<goal>"`,
+		"  stui worker start --agent claude --task task.md",
+		"Or let the agent do it: stui plugin install, then ask it to split the work.",
+	}
+	if stOnPath() {
+		out = append(out, "", "st is installed here: its runs are in st ui.")
+	}
+	return out
+}
+
+// shortcut: any "st" on PATH counts (another program could have the name);
+// running it to ask would be worse.
+var stOnPath = sync.OnceValue(func() bool {
+	_, err := exec.LookPath("st")
+	return err == nil
+})
+
 func fold(open bool) string {
 	if open {
 		return "▾ "
@@ -543,7 +570,7 @@ func (usageView) rows(a *app) []row {
 			account = ag.Account.Label
 		}
 		if len(ag.Windows) == 0 {
-			out = append(out, row{id: ag.Agent, color: cGray, cells: []string{ag.Agent, ag.Plan, account, ag.State, "", "", "", guard[ag.Agent]}})
+			out = append(out, row{id: ag.Agent, color: cGray, cells: []string{ag.Agent, ag.Plan, account, noWindows(ag), "", "", "", guard[ag.Agent]}})
 			continue
 		}
 		for _, w := range ag.Windows {
@@ -561,6 +588,20 @@ func (usageView) rows(a *app) []row {
 		}
 	}
 	return out
+}
+
+// noWindows says what to do about an agent with no limits to show.
+func noWindows(ag usageAgent) string {
+	if stusage.PollOff(stusage.DefaultEnv(home.Dir())) {
+		if ag.Agent == "claude" {
+			return "none: stui usage poll on, or stui hooks install --usage"
+		}
+		return "none: stui usage poll on"
+	}
+	if ag.Agent == "claude" {
+		return "none yet: needs a Claude login here, or stui hooks install --usage"
+	}
+	return "none yet: needs a ChatGPT login in codex"
 }
 
 func limitName(w usageWindow) string {

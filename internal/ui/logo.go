@@ -5,35 +5,54 @@ import (
 	"strings"
 )
 
-// logo is stui's name, top right of the header as k9s puts its own.
-var logo = []string{
-	` _ _|_     o`,
-	`_>  |_ |_| |`,
+// logoWord is the name in one row, for a header too short or narrow for
+// logoRows: bold, in the same colour.
+const logoWord = "stui"
+
+// logoRows is stui's logo: eight rows, 34 columns.
+var logoRows = []string{
+	`             /$$               /$$`,
+	`            | $$              |__/`,
+	`  /$$$$$$$ /$$$$$$   /$$   /$$ /$$`,
+	` /$$_____/|_  $$_/  | $$  | $$| $$`,
+	`|  $$$$$$   | $$    | $$  | $$| $$`,
+	` \____  $$  | $$ /$$| $$  | $$| $$`,
+	` /$$$$$$$/  |  $$$$/|  $$$$$$/| $$`,
+	`|_______/    \___/   \______/ |__/`,
 }
 
-const logoWidth = 12
-
-// logoMin is the narrowest terminal that shows the logo: below it the
-// columns of keys need the room more.
-const logoMin = 96
-
-// logoLines is the logo and the version under it, each logoWidth columns,
-// or nil when the terminal is too narrow. NO_COLOR gets plain text.
-func logoLines(version string, w int) []string {
-	if w < logoMin {
-		return nil
+// logoLines is the logo for a header of n rows with room columns left
+// beside the keys: the whole logo where it fits, else the word, else nil --
+// the logo is never cut. Under it, this stui's version when a row is left.
+// Each line is as wide as the logo; NO_COLOR gets plain text.
+func logoLines(version string, room, n int) (lines []string, width int) {
+	rows := logoRows
+	if n < len(logoRows) || room < Cells(logoRows[0]) {
+		rows = []string{logoWord}
 	}
-	c, v := cTeal+bold, cGray
+	width = Cells(rows[0])
+	if room < width || n == 0 {
+		return nil, 0
+	}
+	c, v := cTeal, cGray
+	if len(rows) == 1 {
+		c += bold
+	}
 	if _, ok := os.LookupEnv("NO_COLOR"); ok {
 		c, v = "", ""
 	}
-	out := make([]string, 0, 3)
-	for _, l := range logo {
-		out = append(out, c+fit(l, logoWidth)+reset)
+	// The version may be wider than the word: then both are right-aligned
+	// in its width, if the room takes it, else it is left out.
+	if version != "" && n > len(rows) && room >= Cells(version) {
+		width = max(width, Cells(version))
+	} else {
+		version = ""
+	}
+	for _, l := range rows {
+		lines = append(lines, strings.Repeat(" ", width-Cells(l))+c+l+reset)
 	}
 	if version != "" {
-		pad := max(0, logoWidth-Cells(version))
-		out = append(out, strings.Repeat(" ", pad)+v+fit(version, logoWidth-pad)+reset)
+		lines = append(lines, strings.Repeat(" ", width-Cells(version))+v+version+reset)
 	}
-	return out
+	return lines, width
 }

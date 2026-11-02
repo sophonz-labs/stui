@@ -158,11 +158,14 @@ func Run(argv []string) int {
 	ad.StartBriefs(ctx)
 
 	// The plan limits come from what the agents leave on this machine (the
-	// status line, session files); stui asks no provider.
+	// status line, session files) and from asking Anthropic and OpenAI every
+	// few minutes with the logins their CLIs keep here (usage/poll.go; off
+	// with stui usage poll off).
 	usageEnv := usage.DefaultEnv(home.Dir())
 	usageEnv.ClaudeFeed = func() bool { return hooks.StatuslineOn(hooks.DefaultEnv()) }
 	usageService := usage.NewService(usage.ServiceOptions{Env: usageEnv})
 	go usageService.Run(ctx, time.Minute)
+	go (&usage.Poller{Env: usageEnv, UserAgent: "stui/" + Version, Logf: func(f string, a ...any) { fmt.Fprintf(os.Stderr, f+"\n", a...) }}).Run(ctx)
 
 	actionOpts := ghactions.ServiceOptions{PaneCwd: m.PaneCwd}
 	actionOpts.Tree = func(ctx context.Context, pane string) []ghactions.Member {

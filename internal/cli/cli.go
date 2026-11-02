@@ -71,9 +71,13 @@ const usageHelp = `stui usage -- the coding agents' plan limits
   stui usage guard on|off|status
                       stop a loop's turn (stui goal, Claude's /goal) when the
                       weekly limit runs faster than the week, or is nearly out
+  stui usage poll on|off
+                      whether stui asks Anthropic and OpenAI itself (on by default)
 
-Claude Code's limits come from its status line: stui hooks install --usage.
-stui asks no provider itself.
+Every five minutes the running stui asks the same endpoint Claude Code's and
+codex's own /usage ask, with the login each CLI already keeps on this machine.
+The token goes only to its own provider; stui never writes or refreshes it.
+Claude Code's status line is read too: stui hooks install --usage.
 `
 
 // Flags that take a value, so the value is not mistaken for the command.
