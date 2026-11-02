@@ -607,6 +607,9 @@ func noWindows(ag usageAgent) string {
 
 func limitName(w usageWindow) string {
 	switch {
+	case w.Kind == "weekly" && w.Label != "":
+		// The per-model weekly limit beside the all-model one.
+		return "weekly " + strings.ToLower(w.Label)
 	case w.Kind == "weekly":
 		return "weekly"
 	case w.Minutes == 300:

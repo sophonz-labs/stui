@@ -140,6 +140,7 @@ type agents struct {
 type usageWindow struct {
 	ID          string  `json:"id"`
 	Kind        string  `json:"kind"`
+	Label       string  `json:"label"`
 	Minutes     int     `json:"minutes"`
 	UsedPercent float64 `json:"usedPercent"`
 	ResetsAt    int64   `json:"resetsAt"`
