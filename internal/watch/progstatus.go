@@ -17,11 +17,27 @@ import (
 // printable UTF-8. stui keeps only the root record (a report without id):
 // that is the pane's program speaking for itself.
 //
-// stui does not answer the "?" query. tmux answers the device-attributes
-// query a program sends after it at once, so an answer from stui, which
-// arrives over control mode a moment later, is always too late (Claude Code
-// 2.1.314 logs "programStatus=no (probe: no reply to OSC 7501 ; ?)" either
-// way). A program that reports without asking first is heard.
+// stui does not answer the "?" query, and inside tmux nothing can. tmux
+// drops an OSC it does not know (input_exit_osc in its input.c handles 0, 2,
+// 4, 7-12, 52, 104, 110-112 and 133 and logs 7501 as unknown, in 3.8 and
+// master as of 2026-10-30), so the terminal outside never sees the query.
+// And tmux answers the device-attributes query (CSI c) sent with it as it
+// reads those bytes, while stui hears them only later over control mode, so
+// an answer from stui would always come second.
+//
+// Claude Code (read in 2.1.316) reports only when the query is answered
+// before the device attributes; once settled it does not ask again. No
+// setting or environment variable turns it on; the only ones that touch it
+// turn it off (CLAUDE_CODE_DISABLE_TERMINAL_TITLE, a background session, VTE
+// before 0.53). In tmux 3.8 it logs "programStatus=no (probe: no reply to
+// OSC 7501 ; ?)" (measured 2026-11-02), so its hooks and screen keep doing
+// that job. psmux answers the query itself, so on Windows a program that
+// asks may report (not measured with Claude Code).
+//
+// A program that reports without asking is heard, in tmux too: stui reads
+// the pane's bytes over control mode, where the OSC still is. A report ends,
+// and hooks and the screen decide again, with state=clear or when the pane
+// runs another program.
 
 // Report is what a pane's program last said about itself.
 type Report struct {

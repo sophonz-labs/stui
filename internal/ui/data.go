@@ -115,8 +115,11 @@ type agentPane struct {
 	Agent      string `json:"agent"`
 	Command    string `json:"command"`
 	State      string `json:"state"`
-	Since      int64  `json:"since"`
-	Turn       *struct {
+	// Where the state came from: report (the program said, OSC 7501), hook,
+	// screen or timeout.
+	Source string `json:"source"`
+	Since  int64  `json:"since"`
+	Turn   *struct {
 		StartedAt int64 `json:"startedAt"`
 	} `json:"turn"`
 	Subagents struct {
