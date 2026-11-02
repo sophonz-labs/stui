@@ -15,7 +15,7 @@ import "strings"
 // ownHelp is the commands with a help text of their own.
 var ownHelp = map[string]string{
 	"gate": gateHelp, "task": taskHelp, "ci": ciHelp,
-	"orch": orchHelp, "worker": orchHelp, "skills": skillsHelp, "plugin": pluginHelp, "ext": extHelp,
+	"orch": orchHelp, "worker": orchHelp, "skills": skillsHelp, "plugin": pluginHelp, "ext": extHelp, "config": configHelp,
 	"hooks": hooksHelp, "usage": usageHelp, "goal": goalHelp,
 }
 
@@ -30,6 +30,20 @@ const pluginHelp = `stui plugin -- the orchestration skills, in the coding agent
 With them an agent knows how to hand work to other agents through stui: the
 commands are stui orch and stui worker (stui orch --help), and what the agents read
 is stui skills get orchestrate | worker.
+`
+
+const configHelp = `stui config -- the UI's settings, k9s style
+
+  stui config [show]    the settings in effect, and where each comes from
+  stui config path      where the file is
+  stui config edit      open it in $VISUAL or $EDITOR (made with the defaults,
+                        commented, if missing)
+
+The file is ~/.config/stui/config.yaml (or under $XDG_CONFIG_HOME). A missing
+file is the defaults; an unknown key or a bad value is a warning in the UI and
+the default. Keys: ui.logo, ui.headless, ui.color, refreshRate, startView,
+plugins.enabled, plugins.disabled. Inside the UI, :config shows them, ctrl-e
+toggles the header, and a saved file (or ctrl-r) is read again.
 `
 
 const extHelp = `stui ext -- plugins: other CLIs in the UI

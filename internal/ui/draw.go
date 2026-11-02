@@ -26,6 +26,24 @@ const (
 	crumbOff = "\x1b[38;5;16;48;5;33m"
 )
 
+// sgrRe is one SGR escape: colours, bold, reverse.
+var sgrRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// monochrome is a drawn line without colour (ui.color: false, NO_COLOR):
+// bold stays, and what a background marked (the selected row, the crumbs)
+// is reverse video, so it still shows.
+func monochrome(s string) string {
+	return sgrRe.ReplaceAllStringFunc(s, func(m string) string {
+		switch {
+		case m == selected || m == crumbOn:
+			return "\x1b[7m"
+		case m == reset || m == bold || m == dim:
+			return m
+		}
+		return ""
+	})
+}
+
 // Cells is how many terminal columns s takes: wide East Asian letters and
 // emoji two, combining marks none.
 func Cells(s string) int {

@@ -1,13 +1,15 @@
 package ui
 
-import (
-	"os"
-	"strings"
-)
+import "strings"
 
 // logoWord is the name in one row, for a header too short or narrow for
 // logoRows: bold, in the same colour.
 const logoWord = "stui"
+
+// logoTall is the shortest terminal that gives the header the logo's rows:
+// 9 for the header (the logo and the version) and 5 for the prompt, frame,
+// column names and footer leave 6 rows of table, k9s's own minimum.
+const logoTall = 20
 
 // logoRows is stui's logo: eight rows, 34 columns.
 var logoRows = []string{
@@ -24,7 +26,7 @@ var logoRows = []string{
 // logoLines is the logo for a header of n rows with room columns left
 // beside the keys: the whole logo where it fits, else the word, else nil --
 // the logo is never cut. Under it, this stui's version when a row is left.
-// Each line is as wide as the logo; NO_COLOR gets plain text.
+// Each line is as wide as the logo.
 func logoLines(version string, room, n int) (lines []string, width int) {
 	rows := logoRows
 	if n < len(logoRows) || room < Cells(logoRows[0]) {
@@ -37,9 +39,6 @@ func logoLines(version string, room, n int) (lines []string, width int) {
 	c, v := cTeal, cGray
 	if len(rows) == 1 {
 		c += bold
-	}
-	if _, ok := os.LookupEnv("NO_COLOR"); ok {
-		c, v = "", ""
 	}
 	// The version may be wider than the word: then both are right-aligned
 	// in its width, if the room takes it, else it is left out.

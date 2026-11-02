@@ -87,8 +87,9 @@ stui --help
 | `n` | sessions, windows | new session; new window, optionally with an agent |
 | `ctrl-d` | sessions, windows, orch | kill or stop (asks first) |
 | `r` `d` | orch | read a worker's answer, its diff |
-| `:` | everywhere | a view, `:ext`, or any stui command: `:worker list`, `:orch history` |
-| `ctrl-r` | everywhere | refresh now (it refreshes every 2 seconds, CI every 10) |
+| `:` | everywhere | a view, `:ext`, `:config`, or any stui command: `:worker list`, `:orch history` |
+| `ctrl-r` | everywhere | refresh now, and read config.yaml again (it refreshes every 2 seconds, CI every fifth time) |
+| `ctrl-e` | everywhere | the header on and off |
 
 States: `working` is teal, `asking` (the agent waits for a person) is orange, `idle` and `done` are plain.
 
@@ -164,6 +165,28 @@ They live in `~/.config/stui/plugins/<name>/plugin.json` (or under `$XDG_CONFIG_
 - stui's own keys, views and commands always win. A plugin key that meets one is left out, and `:ext` says so.
 
 `stui ext` is for the UI; `stui plugin` is something else (the orchestration skills for coding agents).
+
+## Config
+
+Settings live in `~/.config/stui/config.yaml` (or under `$XDG_CONFIG_HOME`), as k9s keeps its own. Without the file stui uses the defaults. A key it does not know, or a value it cannot use, is a warning in the status line and in `:config`, and the default stands. stui reads the file again when it changes, and on `ctrl-r`.
+
+```sh
+stui config          # the settings in effect, and where each comes from
+stui config edit     # open it in $EDITOR, made with every default commented if missing
+stui config path
+```
+
+| Key | Default | |
+|---|---|---|
+| `ui.logo` | `true` | the logo at the header's top right; `:logo` turns it off for now |
+| `ui.headless` | `false` | no header at all; `ctrl-e` or `:headless` toggles it for now |
+| `ui.color` | `true` | `false` draws without colour, as `NO_COLOR` (which always wins) |
+| `refreshRate` | `2s` | how often stui reads its server again, `500ms` or more; CI every fifth time |
+| `startView` | `sessions` | the view it opens on: `sessions`, `agents`, `orch`, `ci` or `usage` (`stui ui <view>` still wins) |
+| `plugins.enabled` | `true` | `false` loads no plugins |
+| `plugins.disabled` | `[]` | plugins to leave out, by name |
+
+[config.example.yaml](config.example.yaml) has them all. The logo needs 20 rows and the room the header's keys leave: 162 columns on the sessions, agents and orch views, 144 on ci and usage. Narrower, the header ends in a one-row `stui` and the version.
 
 ## Files
 

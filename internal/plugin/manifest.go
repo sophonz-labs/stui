@@ -79,7 +79,7 @@ var TmuxScopes = []string{"sessions", "windows", "panes"}
 
 // Reserved are the keys no plugin action may take, on any view, in any
 // TUI: moving, filtering, commands, help, and the digits that switch views.
-var Reserved = []string{"j", "k", "g", "G", "h", "l", "q", "/", ":", "?", "enter", "esc", "ctrl-b", "ctrl-f", "ctrl-r", "ctrl-c",
+var Reserved = []string{"j", "k", "g", "G", "h", "l", "q", "/", ":", "?", "enter", "esc", "ctrl-b", "ctrl-f", "ctrl-r", "ctrl-c", "ctrl-e",
 	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 
 // TmuxVars are the placeholders every action and command can use.

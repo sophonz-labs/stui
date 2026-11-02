@@ -16,7 +16,7 @@ import (
 // Builtins is what a plugin cannot take: stui ui's own : commands (its
 // views, and every stui command, which : runs) and keys.
 func Builtins() plugin.Builtins {
-	cmds := []string{"q", "quit", "q!", "help", "?", "ext", "stui", "ui", "windows", "panes", "exit", "task", "gate"}
+	cmds := []string{"q", "quit", "q!", "help", "?", "ext", "stui", "ui", "windows", "panes", "exit", "task", "gate", "config", "logo", "headless"}
 	cmds = append(cmds, stCommands...)
 	for n := range viewNames {
 		cmds = append(cmds, n)
@@ -35,7 +35,7 @@ func Builtins() plugin.Builtins {
 }
 
 func (a *app) loadPlugins(dirs []string) {
-	a.plugins = plugin.Load(dirs)
+	a.plugins = a.keepPlugins(plugin.Load(dirs))
 	a.pset = plugin.Resolve(a.plugins, Builtins())
 }
 

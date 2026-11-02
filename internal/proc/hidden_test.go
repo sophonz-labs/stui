@@ -29,17 +29,18 @@ func TestEveryConsoleChildIsHiddenOnWindows(t *testing.T) {
 	allowed := map[string]string{
 		// Run by a person, from a terminal that already exists. A child
 		// inherits that console and opens no window of its own.
-		"internal/cli/cli.go:attachTo":       "the user's own terminal",
-		"internal/cli/cli.go:upgradeCommand": "the user's own terminal",
-		"internal/cli/keep.go:fallBack":      "the user's own terminal",
-		"internal/cli/service.go:run":        "the user's own terminal",
-		"internal/ui/ui.go:stCmd":            "stui ui runs in the user's own terminal",
-		"internal/ui/attach.go:serverSocket": "stui ui runs in the user's own terminal",
-		"internal/ui/attach.go:locate":       "stui ui runs in the user's own terminal",
-		"internal/ui/attach.go:attachTo":     "stui ui runs in the user's own terminal",
-		"internal/ui/ci.go:open":             "stui ui runs in the user's own terminal",
-		"internal/ui/plugins.go:runExec":     "stui ui runs in the user's own terminal",
-		"internal/ui/plugins.go:popup":       "stui ui runs in the user's own terminal",
+		"internal/cli/cli.go:attachTo":        "the user's own terminal",
+		"internal/cli/cli.go:upgradeCommand":  "the user's own terminal",
+		"internal/cli/keep.go:fallBack":       "the user's own terminal",
+		"internal/cli/service.go:run":         "the user's own terminal",
+		"internal/ui/ui.go:stCmd":             "stui ui runs in the user's own terminal",
+		"internal/ui/attach.go:serverSocket":  "stui ui runs in the user's own terminal",
+		"internal/ui/attach.go:locate":        "stui ui runs in the user's own terminal",
+		"internal/ui/attach.go:attachTo":      "stui ui runs in the user's own terminal",
+		"internal/ui/ci.go:open":              "stui ui runs in the user's own terminal",
+		"internal/ui/plugins.go:runExec":      "stui ui runs in the user's own terminal",
+		"internal/ui/plugins.go:popup":        "stui ui runs in the user's own terminal",
+		"internal/config/config.go:editorCmd": "stui config edit runs in the user's own terminal",
 
 		// stui service is launchd and systemd only; there is no Windows service,
 		// so keepalive never runs there.
