@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/sophonz-labs/stui/internal/home"
+	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/proc"
 	"github.com/sophonz-labs/stui/internal/state"
-	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/ui"
 )
 
