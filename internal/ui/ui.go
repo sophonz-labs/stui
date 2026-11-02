@@ -838,14 +838,11 @@ func (a *app) header(w, n int) []string {
 	var mid []string
 	for _, ag := range s.usage.Agents {
 		for _, uw := range ag.Windows {
-			// Eight columns: the per-model weekly limit goes by its model alone
-			// ("sonnet"), as "weekly sonnet" would be cut to "weekly …".
-			limit := limitName(uw)
-			if uw.Kind == "weekly" && uw.Label != "" {
-				limit = strings.ToLower(uw.Label)
-			}
-			name := fit(ag.Agent, 7) + fit(limit, 8)
-			mid = append(mid, cOrange+name+reset+bar(uw.UsedPercent, 10)+cWhite+fit(fmt.Sprintf(" %3.0f%% %s", uw.UsedPercent, resets(uw.ResetsAt)), c2-25)+reset)
+			// The name takes what the percent and reset time (14) leave, up
+			// to "weekly sonnet", as st ui does.
+			nameW := max(8, min(14, c2-31))
+			name := fit(ag.Agent, 7) + fit(limitName(uw), nameW)
+			mid = append(mid, cOrange+name+reset+bar(uw.UsedPercent, 10)+cWhite+fit(fmt.Sprintf(" %3.0f%% %s", uw.UsedPercent, resets(uw.ResetsAt)), c2-17-nameW)+reset)
 		}
 	}
 	working, waiting, idle := 0, 0, 0
