@@ -674,11 +674,53 @@ func (a *app) visibleRows(p *page) []row {
 	return out
 }
 
+// headerRows is 6, or 9 for the whole logo and the version under it when
+// the terminal is tall enough and the keys leave it room.
 func (a *app) headerRows() int {
 	if a.h < 16 {
 		return 0
 	}
+	if a.h >= 40 {
+		c1, c2 := headerCols(a.w)
+		if _, _, room := a.keys(a.w, 9, c1, c2); room >= Cells(logoRows[0]) {
+			return 9
+		}
+	}
 	return 6
+}
+
+// headerCols is the widths of the machine's column and the limits' (0
+// when there is no room for them).
+func headerCols(w int) (c1, c2 int) {
+	c1 = min(38, w)
+	c2 = min(46, max(0, w-c1-2))
+	if c2 < 30 {
+		c2 = 0
+	}
+	return c1, c2
+}
+
+const keyColW = 18
+
+// keys is the header's keys -- this view's, then the views' digits -- in
+// columns of n rows, and the columns left beside them for the logo: the
+// keys come first, and a header without a key column has no logo.
+func (a *app) keys(w, n, c1, c2 int) (hints []hint, cols, room int) {
+	if p := a.top(); p.v != nil {
+		hints = append(hints, p.v.hints()...)
+	} else {
+		hints = append(hints, hint{"j/k", "scroll"}, hint{"r", "reload"})
+	}
+	for _, h := range hotkeys {
+		hints = append(hints, hint{h.key, h.name})
+	}
+	hints = append(hints, hint{":", "command"}, hint{"/", "filter"}, hint{"?", "help"})
+	c3 := max(0, w-c1-c2-6)
+	cols = min(c3/keyColW, (len(hints)+n-1)/max(1, n))
+	if cols == 0 {
+		return hints, 0, -1
+	}
+	return hints, cols, c3 - cols*keyColW - 2
 }
 
 // bodyRows is how many table rows fit.
@@ -723,7 +765,7 @@ func (a *app) header(w, n int) []string {
 	label := func(k, v string, width int) string {
 		return cOrange + fit(k, 7) + reset + cWhite + fit(v, width-7) + reset
 	}
-	c1 := min(38, w)
+	c1, c2 := headerCols(w)
 	left := []string{
 		label("OS:", s.version.OS, c1),
 		label("Mux:", strings.TrimSpace(s.version.Mux+" "+s.version.MuxVersion), c1),
@@ -731,10 +773,6 @@ func (a *app) header(w, n int) []string {
 		label("CI:", a.ciSummary(), c1),
 	}
 	// The limits go when there is no room for them, then the keys.
-	c2 := min(46, max(0, w-c1-2))
-	if c2 < 30 {
-		c2 = 0
-	}
 	var mid []string
 	for _, ag := range s.usage.Agents {
 		for _, uw := range ag.Windows {
@@ -754,24 +792,9 @@ func (a *app) header(w, n int) []string {
 	}
 	mid = append(mid, cOrange+fit("Guard:", 8)+reset+cWhite+fit(guard, c2-8)+reset)
 
-	// The keys: this view's, then the views' digits, in columns of n.
-	var hints []hint
-	if p := a.top(); p.v != nil {
-		hints = append(hints, p.v.hints()...)
-	} else {
-		hints = append(hints, hint{"j/k", "scroll"}, hint{"r", "reload"})
-	}
-	for _, h := range hotkeys {
-		hints = append(hints, hint{h.key, h.name})
-	}
-	hints = append(hints, hint{":", "command"}, hint{"/", "filter"}, hint{"?", "help"})
-	logo := logoLines(a.ver, w)
-	c3 := max(0, w-c1-c2-6)
-	if logo != nil {
-		c3 = max(0, c3-logoWidth-2)
-	}
-	colW := 18
-	cols := max(0, c3/colW)
+	hints, cols, room := a.keys(w, n, c1, c2)
+	colW := keyColW
+	logo, logoW := logoLines(a.ver, room, n)
 	out := make([]string, n)
 	for i := range n {
 		line := ""
@@ -803,19 +826,11 @@ func (a *app) header(w, n int) []string {
 			line += cBlue + k + reset + " " + cGray + fit(h.desc, colW-Cells(k)-1) + reset
 			used += colW
 		}
-		pad := max(0, w-used)
-		if logo != nil {
-			pad = max(0, pad-logoWidth)
+		if i < len(logo) {
+			line += strings.Repeat(" ", max(0, w-used-logoW)) + logo[i]
+			used = w
 		}
-		line += strings.Repeat(" ", pad)
-		if logo != nil {
-			if i < len(logo) {
-				line += logo[i]
-			} else {
-				line += strings.Repeat(" ", logoWidth)
-			}
-		}
-		out[i] = line
+		out[i] = line + strings.Repeat(" ", max(0, w-used))
 	}
 	return out
 }
@@ -930,7 +945,13 @@ func (a *app) body(h int) []string {
 	}
 	rows := []string{cWhite + bold + cellLine(hdr) + reset}
 	if len(all) == 0 {
-		rows = append(rows, cGray+fit("  nothing to show", inner)+reset)
+		lines := []string{"nothing to show"}
+		if e, ok := p.v.(interface{ empty(*app) []string }); ok && p.filter == "" {
+			lines = e.empty(a)
+		}
+		for _, l := range lines {
+			rows = append(rows, cGray+fit("  "+l, inner)+reset)
+		}
 	}
 	for i := p.top; i < len(all) && i < p.top+n; i++ {
 		color := all[i].color

@@ -1,6 +1,6 @@
-OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter> windows                  _ _|_     o
-Mux:   tmux 3.8                         Guard:  off                                     <p> panes                       _>  |_ |_| |
-Panes: 7 in 3 sessions                                                                  <a> attach                               dev
+OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter> windows                         stui
+Mux:   tmux 3.8                         Guard:  off                                     <p> panes                                dev
+Panes: 7 in 3 sessions                                                                  <a> attach
 CI:    1 failed                                                                         <n> new
                                                                                         <ctrl-d> kill
                                                                                         <1> sessions

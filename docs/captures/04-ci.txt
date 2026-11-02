@@ -1,6 +1,6 @@
-OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter/o> open in…               _ _|_     o
-Mux:   tmux 3.8                         Guard:  off                                     <1> sessions                    _>  |_ |_| |
-Panes: 7 in 3 sessions                                                                  <2> agents                               dev
+OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter/o> open in…                      stui
+Mux:   tmux 3.8                         Guard:  off                                     <1> sessions                             dev
+Panes: 7 in 3 sessions                                                                  <2> agents
 CI:    1 failed                                                                         <3> orch
                                                                                         <4> ci
                                                                                         <5> usage

@@ -397,3 +397,112 @@ func base64URL(s string) string {
 }
 
 // ---- asking the providers (poll.go)
+
+func TestParseProviderAnswers(t *testing.T) {
+	// /api/oauth/usage as it answered on 2026-10-10: utilization 0-100, RFC
+	// 3339 resets_at, dollar fields and unknown experiments beside them.
+	claude := []byte(`{"five_hour":{"utilization":4.0,"resets_at":"2026-10-10T16:00:00.234805+00:00","limit_dollars":null},
+	  "seven_day":{"utilization":5.5,"resets_at":"2026-10-17T06:00:00.234829+00:00"},
+	  "seven_day_opus":null,"seven_day_sonnet":{"utilization":12,"resets_at":"2026-10-17T06:00:00+00:00"},
+	  "iguana_necktie":{"utilization":0.07,"resets_at":"2026-11-05T07:59:00+00:00","limit_dollars":250},
+	  "extra_usage":{"is_enabled":false},"limits":[{"kind":"session","percent":4}]}`)
+	ws := ParseClaudeUsage(claude)
+	if len(ws) != 3 || ws[0].ID != "five_hour" || ws[0].UsedPercent != 4 || ws[0].Kind != "session" ||
+		ws[1].ID != "seven_day" || ws[1].UsedPercent != 5.5 || ws[1].Minutes != 10080 ||
+		ws[2].ID != "seven_day_sonnet" || ws[2].Label != "Sonnet" {
+		t.Fatalf("claude windows: %+v", ws)
+	}
+	if got := time.UnixMilli(ws[0].ResetsAt).UTC().Format(time.RFC3339); got != "2026-10-10T16:00:00Z" {
+		t.Errorf("five_hour resets %s", got)
+	}
+	if ParseClaudeUsage([]byte(`[]`)) != nil || ParseClaudeUsage([]byte(`{"error":"x"}`)) != nil {
+		t.Error("not an answer: no windows")
+	}
+
+	// /backend-api/wham/usage as it answered: a free plan's one 30-day
+	// window with reset_at in seconds, and a Plus-shaped pair.
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	codex := []byte(`{"plan_type":"free","rate_limit":{"allowed":true,"limit_reached":false,
+	  "primary_window":{"used_percent":6,"limit_window_seconds":2592000,"reset_after_seconds":1787832,"reset_at":1793428174},
+	  "secondary_window":null},"credits":{"has_credits":false}}`)
+	ws, plan := ParseCodexUsage(codex, now)
+	if plan != "Free" || len(ws) != 1 || ws[0].ID != "primary" || ws[0].Minutes != 43200 || ws[0].Kind != "other" ||
+		ws[0].UsedPercent != 6 || ws[0].ResetsAt != 1793428174000 {
+		t.Fatalf("codex free: %q %+v", plan, ws)
+	}
+	plus := []byte(`{"plan_type":"plus","rate_limit":{"primary_window":{"used_percent":42.5,"limit_window_seconds":18000,"reset_after_seconds":600},
+	  "secondary_window":{"used_percent":80,"limit_window_seconds":604800,"reset_after_seconds":86400}}}`)
+	ws, plan = ParseCodexUsage(plus, now)
+	if plan != "Plus" || len(ws) != 2 || ws[0].Kind != "session" || ws[0].ResetsAt != now.Add(10*time.Minute).UnixMilli() ||
+		ws[1].Kind != "weekly" || ws[1].UsedPercent != 80 {
+		t.Fatalf("codex plus: %q %+v", plan, ws)
+	}
+	if ws, _ := ParseCodexUsage([]byte(`{"plan_type":"plus"}`), now); ws != nil {
+		t.Error("no rate_limit: no windows")
+	}
+
+	// The logins: only the token and its expiry are taken.
+	l, ok := parseClaudeLogin([]byte(`{"claudeAiOauth":{"accessToken":"sk-ant-x","refreshToken":"r","expiresAt":1791646939380,"scopes":["user:inference"]}}` + "\n"))
+	if !ok || l.token != "sk-ant-x" || l.expiresAt != 1791646939380 {
+		t.Errorf("claude login: %+v %v", l, ok)
+	}
+	if _, ok := parseClaudeLogin([]byte(`{"claudeAiOauth":{"refreshToken":"r"}}`)); ok {
+		t.Error("no access token: no login")
+	}
+	claims := base64.RawURLEncoding.EncodeToString([]byte(`{"exp":1800000000,"https://api.openai.com/auth":{"chatgpt_account_id":"acct-1"}}`))
+	c, ok := parseCodexLogin([]byte(`{"tokens":{"access_token":"h.` + claims + `.s","account_id":""}}`))
+	if !ok || c.accountID != "acct-1" || c.expiresAt != 1800000000000 {
+		t.Errorf("codex login: %+v %v", c, ok)
+	}
+	if !expired(now.UnixMilli(), now) || expired(now.Add(time.Hour).UnixMilli(), now) || expired(0, now) {
+		t.Error("expired")
+	}
+}
+
+func TestPollMergesWithTheAgentsOwnWord(t *testing.T) {
+	home := t.TempDir()
+	state := filepath.Join(home, ".stui")
+	e := Env{Home: home, StateDir: state, ClaudeDir: filepath.Join(home, ".claude"), CodexDir: filepath.Join(home, ".codex"), ClaudeFeed: func() bool { return false }}
+	os.MkdirAll(e.ClaudeDir, 0o700)
+	os.MkdirAll(e.CodexDir, 0o700)
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	e.Now = func() time.Time { return now }
+
+	// Nothing from the agents yet: the poll alone is ok, from the provider.
+	w5 := Window{ID: "five_hour", Kind: "session", Minutes: 300, UsedPercent: 30, ResetsAt: now.Add(time.Hour).UnixMilli()}
+	if err := writePoll(pollFile(e, "claude", ""), pollRecord{Agent: "claude", ObservedAt: now.Add(-time.Minute).UnixMilli(), Windows: []Window{w5}}); err != nil {
+		t.Fatal(err)
+	}
+	rep := Read(e)
+	if len(rep.Agents) != 2 || rep.Agents[0].State != "ok" || rep.Agents[0].Source != SourcePoll || rep.Agents[0].Windows[0].UsedPercent != 30 {
+		t.Fatalf("poll alone: %+v", rep.Agents)
+	}
+	if rep.Agents[1].Agent != "codex" || rep.Agents[1].State != "waiting" {
+		t.Fatalf("codex without anything: %+v", rep.Agents[1])
+	}
+
+	// A newer status line reading wins; an older one loses.
+	sl := w5
+	sl.UsedPercent = 35
+	Keep(state, "", []Window{sl}, now, nil)
+	if a := Read(e).Agents[0]; a.Source != SourceStatuslineOff || a.Windows[0].UsedPercent != 35 {
+		t.Errorf("newer status line: %+v", a)
+	}
+	writePoll(pollFile(e, "claude", ""), pollRecord{Agent: "claude", ObservedAt: now.Add(time.Minute).UnixMilli(), Windows: []Window{{ID: "five_hour", Kind: "session", Minutes: 300, UsedPercent: 40}}})
+	if a := Read(e).Agents[0]; a.Source != SourcePoll || a.Windows[0].UsedPercent != 40 {
+		t.Errorf("newer poll: %+v", a)
+	}
+
+	// Codex: the poll over an older session file, with its plan.
+	writePoll(pollFile(e, "codex", ""), pollRecord{Agent: "codex", ObservedAt: now.UnixMilli(), Plan: "Plus", Windows: []Window{{ID: "primary", Kind: "session", Minutes: 300, UsedPercent: 7}}})
+	if a := Read(e).Agents[1]; a.State != "ok" || a.Source != SourcePoll || a.Plan != "Plus" || a.Windows[0].UsedPercent != 7 {
+		t.Errorf("codex poll: %+v", a)
+	}
+
+	if err := SetPoll(e, false); err != nil || !PollOff(e) {
+		t.Fatal("poll off", err)
+	}
+	if err := SetPoll(e, true); err != nil || PollOff(e) {
+		t.Fatal("poll on", err)
+	}
+}

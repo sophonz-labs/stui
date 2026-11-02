@@ -1,13 +1,24 @@
 # stui
 
+```text
+             /$$               /$$
+            | $$              |__/
+  /$$$$$$$ /$$$$$$   /$$   /$$ /$$
+ /$$_____/|_  $$_/  | $$  | $$| $$
+|  $$$$$$   | $$    | $$  | $$| $$
+ \____  $$  | $$ /$$| $$  | $$| $$
+ /$$$$$$$/  |  $$$$/|  $$$$$$/| $$
+|_______/    \___/   \______/ |__/
+```
+
 A terminal UI for tmux and the coding agents running in it. It shows your sessions, windows and panes, which Claude Code, Codex, opencode or Pi agents are idle, working or asking for you, the GitHub Actions state of each pane's repository, and the orchestration runs where one agent hands work to others. It attaches to any of them and comes back when you detach.
 
-Everything stays on this machine. stui runs a small background server on `127.0.0.1` that watches tmux and the agents' hooks; the UI and the CLI talk to it. The only network calls are the ones `gh` makes to GitHub.
+Everything stays on this machine. stui runs a small background server on `127.0.0.1` that watches tmux and the agents' hooks; the UI and the CLI talk to it. It makes two kinds of network call: `gh` asks GitHub for CI runs, and the usage poller asks Anthropic and OpenAI for your plan limits (see [Usage limits](#usage-limits); `stui usage poll off` stops it).
 
 ```
-OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter> output                   _ _|_     o
-Mux:   tmux 3.8                         Guard:  off                                     <a> attach to it                _>  |_ |_| |
-Panes: 7 in 3 sessions                                                                  <c> its CI                               dev
+OS:    darwin/arm64                     Agents: 1 working 1 asking 2 idle               <enter> output                          stui
+Mux:   tmux 3.8                         Guard:  off                                     <a> attach to it                         dev
+Panes: 7 in 3 sessions                                                                  <c> its CI
 CI:    1 failed                                                                         <o> open CI run
                                                                                         <1> sessions
                                                                                         <2> agents
@@ -21,6 +32,10 @@ CI:    1 failed                                                                 
 ```
 
 More screens are in [docs/captures](docs/captures).
+
+## Without st / with st
+
+stui needs no st, no account and no relay: install it, run `stui`, and everything above works on this machine alone. If you use st, use `st ui` instead; it is the same screen with your other machines in it. The two keep separate state (`~/.stui` here) and do not read each other's runs, so a run started with `st` shows in `st ui`, not in stui.
 
 ## Install
 
@@ -113,6 +128,21 @@ stui worker list
 ```
 
 A worker reports with `stui worker done --summary "<what it did, how it checked>"`. Workers can get their own git worktree (`--worktree`), owned paths (`--owns`), tasks with dependencies (`stui task`), and decisions that need a person (`stui gate`). See [docs/orchestration.md](docs/orchestration.md) and [docs/captures/orchestration.txt](docs/captures/orchestration.txt).
+
+## Usage limits
+
+The usage view and the header show how much of each plan limit Claude Code and Codex have used, and when it resets. stui gets the numbers two ways, and shows the newer:
+
+- **It asks the provider.** Every five minutes the running stui reads the login the CLI already keeps on this machine (Claude Code: the macOS keychain item `Claude Code-credentials`, or `~/.claude/.credentials.json`; codex: `~/.codex/auth.json`) and makes the same request that CLI's own `/usage` makes: `GET https://api.anthropic.com/api/oauth/usage` and `GET https://chatgpt.com/backend-api/wham/usage`. The token is sent only to its own provider, never written anywhere, never logged and never refreshed; an expired one is skipped until the CLI signs in again. What comes back (percentages and reset times) is kept in `~/.stui/usage`.
+- **The agent hands it over.** `stui hooks install --usage` makes `stui statusline` Claude Code's status line, which receives the limits on every turn; Codex writes them into its session files.
+
+```sh
+stui usage              # the limits, from the command line
+stui usage poll off     # stop asking the providers; only what the agents hand over is shown
+stui usage poll on
+```
+
+An API-key login has no plan limits, so there is nothing to show for it.
 
 ## Files
 

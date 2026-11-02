@@ -20,6 +20,31 @@ func usageCommand(argv []string) {
 		usageGuard(e, argv[1:])
 		return
 	}
+	if len(argv) > 0 && argv[0] == "poll" {
+		var err error
+		switch {
+		case len(argv) > 1 && argv[1] == "on":
+			err = usage.SetPoll(e, true)
+		case len(argv) > 1 && argv[1] == "off":
+			err = usage.SetPoll(e, false)
+		case len(argv) > 1:
+			fmt.Fprintln(os.Stderr, "usage: stui usage poll [on|off]")
+			os.Exit(2)
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "stui usage poll: %v\n", err)
+			os.Exit(1)
+		}
+		if usage.PollOff(e) {
+			fmt.Printf("  %-12s off — stui reads only what the agents hand over (stui usage poll on)\n", "poll")
+		} else {
+			fmt.Printf("  %-12s on — stui asks Anthropic and OpenAI every %s with the logins Claude Code and codex keep here; the token goes only to its own provider (stui usage poll off)\n", "poll", usage.PollEvery)
+		}
+		if len(argv) > 1 {
+			fmt.Printf("  %sa running stui picks it up within %s%s\n", dim, usage.PollEvery, reset)
+		}
+		return
+	}
 	rep := usage.Read(e)
 	if len(rep.Agents) == 0 {
 		fmt.Printf("  %sneither Claude Code nor Codex is on this machine%s\n", dim, reset)
