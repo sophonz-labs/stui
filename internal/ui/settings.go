@@ -27,6 +27,7 @@ func (a *app) applyConfig(c *config.Config) {
 	a.cfg = c
 	a.logoOn, a.headless = c.Logo, c.Headless
 	a.rate.Store(int64(c.RefreshRate))
+	a.readST.Store(c.STRead)
 	if a.scr != nil {
 		a.scr.mono = !c.Color
 	}

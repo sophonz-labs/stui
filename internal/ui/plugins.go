@@ -572,3 +572,6 @@ func (a *app) viewOrder() []string {
 	}
 	return out
 }
+
+// y on a plugin is its name.
+func (pluginsView) copyValue(r *row) string { return r.cells[0] }

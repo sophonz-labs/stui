@@ -19,6 +19,7 @@ import (
 
 	"github.com/sophonz-labs/stui/internal/config"
 	"github.com/sophonz-labs/stui/internal/plugin"
+	"github.com/sophonz-labs/stui/internal/proc"
 	"github.com/sophonz-labs/stui/internal/state"
 )
 
@@ -50,6 +51,8 @@ type pager struct {
 	top          int
 	follow       bool // at the bottom, staying there as it grows
 	reload       func() ([]string, error)
+	selecting    bool // v: lines anchor..cur are marked for y
+	anchor, cur  int
 }
 
 type app struct {
@@ -79,7 +82,11 @@ type app struct {
 	logoOn   bool         // ui.logo, until :logo says otherwise
 	headless bool         // ui.headless, likewise
 	rate     atomic.Int64 // refreshRate, read by fetchLoop
+	readST   atomic.Bool  // st.read, likewise
 	ticks    int
+
+	copied string // the last text y put on the clipboard
+	zoom   bool   // z: an output alone on the screen, for the terminal's own selection
 
 	snaps   chan *snap
 	refresh chan struct{}
@@ -97,7 +104,7 @@ func Run(s *state.Agent, version string, args []string) int {
 	a := &app{c: newClient(s), at: at, ver: version, shared: at.ownSession, exe: exe, folded: map[string]bool{},
 		snaps: make(chan *snap, 1), refresh: make(chan struct{}, 1), later: make(chan func(), 16)}
 	a.applyConfig(config.Load(config.Path("stui"), startViews))
-	a.snap = a.c.fetch(nil, false)
+	a.snap = a.c.fetch(nil, false, a.readST.Load())
 	if a.snap.err != nil {
 		fmt.Fprintf(os.Stderr, "stui ui: stui's server does not answer: %v\n", a.snap.err)
 		return 1
@@ -139,7 +146,7 @@ func (a *app) fetchLoop() {
 		case <-a.refresh:
 		case <-time.After(time.Duration(a.rate.Load())):
 		}
-		s := a.c.fetch(prev, n%5 == 1) // CI every 5th time, first after one
+		s := a.c.fetch(prev, n%5 == 1, a.readST.Load()) // CI every 5th time, first after one
 		prev = s
 		select {
 		case <-a.snaps: // drop one not drawn yet
@@ -207,6 +214,10 @@ func (a *app) push(v view) { a.stack = append(a.stack, &page{v: v}) }
 func (a *app) pushPager(p *pager) { a.stack = append(a.stack, &page{pg: p}) }
 
 func (a *app) pop() {
+	if a.zoom {
+		a.zoom = false
+		a.clear()
+	}
 	if len(a.stack) > 1 {
 		a.stack = a.stack[:len(a.stack)-1]
 	}
@@ -265,6 +276,15 @@ func (a *app) normalKey(k string) {
 		a.pop()
 		return
 	case "esc":
+		if p.pg != nil && p.pg.selecting {
+			p.pg.selecting = false
+			return
+		}
+		if a.zoom {
+			a.zoom = false
+			a.clear()
+			return
+		}
 		if p.filter != "" {
 			p.filter = ""
 			return
@@ -327,6 +347,10 @@ func (a *app) normalKey(k string) {
 		if p.cursor >= 0 && p.cursor < len(rows) {
 			r = &rows[p.cursor]
 		}
+		if (k == "y" || k == "Y") && r != nil {
+			a.copyRow(p, r, k == "Y")
+			return
+		}
 		if !p.v.key(a, k, r) && !a.pluginKey(p, k, r) && k == "enter" && r == nil {
 			a.say("nothing here", false)
 		}
@@ -339,8 +363,25 @@ func (a *app) normalKey(k string) {
 }
 
 func (a *app) pagerKey(pg *pager, k string) {
+	if pg.selecting && a.selectKey(pg, k) {
+		return
+	}
 	n := a.bodyRows()
 	switch k {
+	case "v":
+		if pg.selecting {
+			pg.selecting = false
+		} else {
+			a.startSelect(pg)
+		}
+		return
+	case "y":
+		a.copyPager(pg)
+		return
+	case "z":
+		a.zoom = !a.zoom
+		a.clear()
+		return
 	case "up", "k":
 		pg.top--
 	case "down", "j", "enter":
@@ -478,13 +519,23 @@ func (a *app) runQuiet(ok string, args ...string) {
 	}()
 }
 
-// output runs an stui command and shows what it printed in a pager.
-func (a *app) output(title string, args ...string) {
-	pg := &pager{title: "Output", scope: title, lines: []string{"running stui " + strings.Join(args, " ") + " …"}}
+// output runs an stui command (or, with st, st's) and shows what it
+// printed in a pager.
+func (a *app) output(st bool, title string, args ...string) {
+	name := "stui"
+	if st {
+		name = "st"
+	}
+	pg := &pager{title: "Output", scope: title, lines: []string{"running " + name + " " + strings.Join(args, " ") + " …"}}
 	pg.reload = func() ([]string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-		out, err := a.stCmd(ctx, args...).CombinedOutput()
+		c := a.stCmd(ctx, args...)
+		if st {
+			c = exec.CommandContext(ctx, "st", args...)
+			proc.Hide(c)
+		}
+		out, err := c.CombinedOutput()
 		lines := strings.Split(strings.TrimRight(plain(string(out)), "\n"), "\n")
 		if err != nil {
 			lines = append(lines, "", "("+err.Error()+")")
@@ -514,15 +565,26 @@ func (a *app) reloadPager(pg *pager) {
 	}()
 }
 
+// showAgent is showPane for an agent, from the server that listed it.
+func (a *app) showAgent(p *agentPane) {
+	c := a.c
+	if p.st && a.snap.st != nil {
+		c = a.snap.st
+	}
+	a.showPaneOn(c, p.Session, p.ID)
+}
+
 // showPane is a pane's output, its history and screen, following it.
-func (a *app) showPane(session, id string) {
+func (a *app) showPane(session, id string) { a.showPaneOn(a.c, session, id) }
+
+func (a *app) showPaneOn(c *client, session, id string) {
 	pg := &pager{title: "Output", scope: session + " " + id, follow: true}
 	pg.reload = func() ([]string, error) {
 		var h struct {
 			Text string `json:"text"`
 		}
 		path := "/api/panes/history?lines=2000&session=" + url.QueryEscape(session) + "&pane=" + url.QueryEscape(id)
-		if err := a.c.get(path, &h); err != nil {
+		if err := c.get(path, &h); err != nil {
 			return nil, err
 		}
 		return strings.Split(strings.TrimRight(plain(h.Text), "\n"), "\n"), nil
@@ -770,8 +832,9 @@ func (a *app) keys(w, n, c1, c2 int) (hints []hint, cols, room int) {
 	if p := a.top(); p.v != nil {
 		hints = append(hints, p.v.hints()...)
 		hints = append(hints, a.pluginKeyHints(p.v)...)
+		hints = append(hints, hint{"y/Y", "copy"})
 	} else {
-		hints = append(hints, hint{"j/k", "scroll"}, hint{"r", "reload"})
+		hints = append(hints, hint{"j/k", "scroll"}, hint{"r", "reload"}, hint{"v", "select"}, hint{"y", "copy"}, hint{"z", "zoom"})
 	}
 	for _, h := range hotkeys {
 		hints = append(hints, hint{h.key, h.name})
@@ -787,6 +850,9 @@ func (a *app) keys(w, n, c1, c2 int) (hints []hint, cols, room int) {
 
 // bodyRows is how many table rows fit.
 func (a *app) bodyRows() int {
+	if a.zoom {
+		return a.h
+	}
 	n := a.h - a.headerRows() - 1 - 2 - 1 // footer, frame, column names
 	if a.mode != normal {
 		n--
@@ -795,6 +861,9 @@ func (a *app) bodyRows() int {
 }
 
 func (a *app) render() []string {
+	if p := a.top(); a.zoom && p.pg != nil {
+		return a.bare(p.pg)
+	}
 	lines := a.header(a.w, a.headerRows())
 	if a.mode != normal {
 		lines = append(lines, a.promptLine())
@@ -968,7 +1037,11 @@ func (a *app) body(h int) []string {
 		pg := p.pg
 		var rows []string
 		for i := pg.top; i < len(pg.lines) && len(rows) < h-2; i++ {
-			rows = append(rows, cWhite+fit(pg.lines[i], inner)+reset)
+			color := cWhite
+			if pg.selecting && i >= min(pg.anchor, pg.cur) && i <= max(pg.anchor, pg.cur) {
+				color = selected
+			}
+			rows = append(rows, color+fit(pg.lines[i], inner)+reset)
 		}
 		return frame(pg.title, pg.scope, -1, rows)
 	}
@@ -1091,6 +1164,16 @@ func (a *app) helpText() []string {
 		"  :config     the settings in effect and where each comes from (stui config edit)",
 		"  :logo  :headless   the logo, the whole header, on or off for now (ctrl-e: the header)",
 		"  :q          quit (or ctrl-c)",
+		"",
+		"COPY (to the clipboard: OSC 52 to the terminal, tmux's buffer inside tmux, and pbcopy,",
+		"      wl-copy, xclip or clip.exe when this machine has one)",
+		"  y           in a table: the row's value (a session's name, session:window, a pane's",
+		"              id, a run's name, a CI run's url, a plugin row's url, else its id)",
+		"  Y           in a table: the whole row, tab-separated",
+		"  v           in an output: select from the bottom line on screen; j k g G extend it",
+		"  y           in an output: the selection, or with none every line of it (not only the",
+		"              ones on screen), as plain text",
+		"  z           in an output: it alone on the screen, no frame, for the mouse; esc comes back",
 		"",
 		"ATTACHING",
 		"  a           attach. Outside tmux, prefix d comes back. Inside tmux 3.2+ it opens",

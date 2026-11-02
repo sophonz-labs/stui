@@ -283,7 +283,7 @@ func (v panesView) rows(a *app) []row {
 		if ag != nil {
 			agent, state, title, color, o = ag.Agent, stateLabel(ag.State), ag.Title, stateColor(ag.State), ag.Orch
 		}
-		out = append(out, row{id: p.ID, color: color, cells: []string{p.ID, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Command, agent, state, turnAge(ag), ciMark(a.snap.ci[p.ID]), orchLabel(o), title}})
+		out = append(out, row{id: p.ID, color: color, cells: []string{p.ID, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Command, agent, state, turnAge(ag), ciMark(a.snap.ci[p.ID]), orchLabel(o) + stTag(ag), title}})
 	}
 	return out
 }
@@ -328,7 +328,7 @@ func (agentsView) rows(a *app) []row {
 		if p.Subagents.Running > 0 {
 			sub = fmt.Sprint(p.Subagents.Running)
 		}
-		out = append(out, row{id: p.ID, color: stateColor(p.State), cells: []string{p.ID, p.Session, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Agent, stateLabel(p.State), turnAge(p), sub, ciMark(a.snap.ci[p.ID]), orchLabel(p.Orch), p.Title}})
+		out = append(out, row{id: p.ID, color: stateColor(p.State), cells: []string{p.ID, p.Session, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Agent, stateLabel(p.State), turnAge(p), sub, ciMark(a.snap.ci[p.ID]), orchLabel(p.Orch) + stTag(p), p.Title}})
 	}
 	return out
 }
@@ -345,7 +345,7 @@ func (agentsView) key(a *app, k string, r *row) bool {
 	}
 	switch k {
 	case "enter", "l":
-		a.showPane(p.Session, p.ID)
+		a.showAgent(p)
 	case "a":
 		a.attachPane(p.Session, p.ID)
 	case "c":
@@ -372,6 +372,7 @@ func (orchView) header() []string {
 }
 
 func (orchView) rows(a *app) []row {
+	// A run is st's or stui's: the same name in both is two runs.
 	byRun := map[string][]*agentPane{}
 	var runs []string
 	for i := range a.snap.agents.Panes {
@@ -379,15 +380,25 @@ func (orchView) rows(a *app) []row {
 		if p.Orch == nil || p.Orch.Run == "" {
 			continue
 		}
-		if byRun[p.Orch.Run] == nil {
-			runs = append(runs, p.Orch.Run)
+		key := "run:" + p.Orch.Run
+		if p.st {
+			key = "st:" + p.Orch.Run
 		}
-		byRun[p.Orch.Run] = append(byRun[p.Orch.Run], p)
+		if byRun[key] == nil {
+			runs = append(runs, key)
+		}
+		byRun[key] = append(byRun[key], p)
 	}
-	sort.Strings(runs)
+	sort.Slice(runs, func(i, j int) bool {
+		return runName(runs[i]) < runName(runs[j]) || runName(runs[i]) == runName(runs[j]) && runs[i] < runs[j]
+	})
 	var out []row
-	for _, run := range runs {
-		ps := byRun[run]
+	for _, key := range runs {
+		ps := byRun[key]
+		run := runName(key)
+		if strings.HasPrefix(key, "st:") {
+			run += " (st)"
+		}
 		here := map[string]bool{}
 		kids := map[string][]*agentPane{}
 		for _, p := range ps {
@@ -403,7 +414,6 @@ func (orchView) rows(a *app) []row {
 				kids[p.Orch.Parent] = append(kids[p.Orch.Parent], p)
 			}
 		}
-		key := "run:" + run
 		open := !a.folded[key]
 		working := 0
 		for _, p := range ps {
@@ -462,17 +472,38 @@ func (orchView) rows(a *app) []row {
 
 // empty is what the view says when it has no runs: how to start one, and
 // where st's are when st is on this machine (stui does not read them).
-func (orchView) empty(*app) []string {
+func (orchView) empty(a *app) []string {
 	out := []string{
 		"No runs yet. In an agent's pane:",
 		`  stui orch start --objective "<goal>"`,
 		"  stui worker start --agent claude --task task.md",
 		"Or let the agent do it: stui plugin install, then ask it to split the work.",
 	}
-	if stOnPath() {
-		out = append(out, "", "st is installed here: its runs are in st ui.")
+	switch {
+	case a.snap.st != nil || !stOnPath():
+	case a.readST.Load():
+		out = append(out, "", "st is installed here but its server is not running: its runs show here when it is.")
+	default:
+		out = append(out, "", "st is installed here: its runs are in st ui (st.read: true shows them here).")
 	}
 	return out
+}
+
+// runName is a run row's run, without the key's prefix (run: or st:).
+func runName(id string) string {
+	_, name, _ := strings.Cut(id, ":")
+	return name
+}
+
+// isRun is whether a row of the tree is a run, not a pane.
+func isRun(id string) bool { return strings.HasPrefix(id, "run:") || strings.HasPrefix(id, "st:") }
+
+// y on a run is its name; on a pane, its id.
+func (orchView) copyValue(r *row) string {
+	if isRun(r.id) {
+		return runName(r.id)
+	}
+	return r.id
 }
 
 // shortcut: any "st" on PATH counts (another program could have the name);
@@ -516,7 +547,7 @@ func (orchView) key(a *app, k string, r *row) bool {
 		}
 		return true
 	}
-	if strings.HasPrefix(r.id, "run:") {
+	if isRun(r.id) {
 		if k == "enter" {
 			a.folded[r.id] = r.open
 			return true
@@ -527,16 +558,24 @@ func (orchView) key(a *app, k string, r *row) bool {
 	if p == nil {
 		return false
 	}
+	tool := "stui"
+	if p.st {
+		tool = "st" // its own CLI reads its runs; both reads below change nothing
+	}
 	switch k {
 	case "enter":
-		a.showPane(p.Session, p.ID)
+		a.showAgent(p)
 	case "r":
-		a.output("stui worker read "+p.ID, "worker", "read", p.ID)
+		a.output(p.st, tool+" worker read "+p.ID, "worker", "read", p.ID)
 	case "d":
-		a.output("stui worker diff "+p.ID, "worker", "diff", p.ID, "--stat")
+		a.output(p.st, tool+" worker diff "+p.ID, "worker", "diff", p.ID, "--stat")
 	case "a":
 		a.attachPane(p.Session, p.ID)
 	case "ctrl-d":
+		if p.st && p.Orch != nil {
+			a.say(stRefusal, true)
+			return true
+		}
 		a.confirm("Stop worker "+orchLabel(p.Orch)+" ("+p.ID+") and close its pane?", func() {
 			a.runQuiet("stopped "+p.ID, "worker", "stop", p.ID, "--yes")
 		})
@@ -650,3 +689,9 @@ func (usageView) key(a *app, k string, _ *row) bool {
 	a.runQuiet("usage guard "+to, "usage", "guard", to)
 	return true
 }
+
+// y on a window is session:index, a tmux target.
+func (v windowsView) copyValue(r *row) string { return v.session + ":" + r.cells[0] }
+
+// y on a limit is the agent's name.
+func (usageView) copyValue(r *row) string { return r.cells[0] }

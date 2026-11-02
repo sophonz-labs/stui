@@ -45,6 +45,7 @@ func TestParseBad(t *testing.T) {
 		{`{"v": 1, "name": "x", "actions": [{"key": "ab", "title": "t", "scopes": ["panes"], "run": ["a"]}]}`, "key"},
 		{`{"v": 1, "name": "x", "actions": [{"key": "a", "title": "t", "scopes": [], "run": ["a"]}]}`, "no scopes"},
 		{`{"v": 1, "name": "x", "actions": [{"key": "l", "title": "t", "scopes": ["panes"], "run": ["a"]}]}`, "reserved"},
+		{`{"v": 1, "name": "x", "actions": [{"key": "y", "title": "t", "scopes": ["panes"], "run": ["a"]}]}`, "reserved"},
 		{`{"v": 1, "name": "x", "actions": [{"key": "a", "title": "t", "scopes": ["panes"], "run": ["a"], "mode": "x"}]}`, "mode"},
 		{`{"v": 1, "name": "x", "actions": [{"key": "a", "title": "t", "scopes": ["panes"], "run": ["a", "{number}"]}]}`, "tmux's views have only"},
 		{`{"v": 1, "name": "x", "actions": [{"key": "a", "title": "t", "scopes": ["panes"], "run": ["a"], "open": "v"}]}`, "not both"},
