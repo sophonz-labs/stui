@@ -253,3 +253,18 @@ func TestEmptyOrchSaysHowToStart(t *testing.T) {
 		t.Errorf("filtered to nothing:\n%s", got)
 	}
 }
+
+func TestLimitNameNamesTheModelWeekly(t *testing.T) {
+	for _, c := range []struct {
+		w    usageWindow
+		want string
+	}{
+		{usageWindow{Kind: "weekly", Minutes: 10080}, "weekly"},
+		{usageWindow{Kind: "weekly", Label: "Sonnet", Minutes: 10080}, "weekly sonnet"},
+		{usageWindow{Kind: "session", Minutes: 300}, "5 hours"},
+	} {
+		if got := limitName(c.w); got != c.want {
+			t.Errorf("limitName(%+v) = %q, want %q", c.w, got, c.want)
+		}
+	}
+}
