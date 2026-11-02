@@ -2,7 +2,7 @@
 
 Another coding agent (the coordinator) started you through stui and gave you a
 task file (its path is in `$STUI_TASK_FILE`). The user can watch you.
-`stui --skill` prints this guide again in one read. Revised 2026-11-02, rev 7.
+`stui --skill` prints this guide again in one read. Revised 2026-11-02, rev 8.
 
 - Do the task in the file, within its ownership and constraints. Do not edit
   what it says other workers own. If stui refuses an edit ("stui: this worker may
@@ -35,7 +35,9 @@ stui worker done --summary "<what you did, and how you checked it>"
   tool's shell has none of its own): `printf '\033]7501;state=working:app=<name>\033\\' > "$(tmux display -p -t "$TMUX_PANE" '#{pane_tty}')"`,
   with `working`, `blocked`, `done`, `error` or `idle`. Once you report, stui
   believes only your reports: report every change, and `state=clear` to hand
-  it back.
+  it back (a report also ends when the pane runs another program). Claude
+  Code does not report inside tmux: it reports only when its `OSC 7501 ; ?`
+  query is answered, tmux drops that query, and no setting turns it on.
 - A message that says `A message from … is in <file> (…). Read it and do
   it.` is your next instruction: read that file and do it, as you did your
   task file. Words before ` -- ` are a note that goes with it.

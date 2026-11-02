@@ -147,3 +147,23 @@ func TestReportFromPlainProgram(t *testing.T) {
 		}
 	}
 }
+
+// An agent that reported and is gone without saying clear: another program
+// in the pane drops the report, and hooks and the screen decide again.
+func TestReportEndsWithItsProgram(t *testing.T) {
+	w, f, _ := setup(t, "claude")
+	w.Output("%1", osc7501("state=blocked:kind=permission"))
+	if p := pane(t, w, "%1"); p.State != Waiting || p.Source != srcReport {
+		t.Fatalf("%+v", p)
+	}
+	f.mu.Lock()
+	f.panes = strings.Replace(f.panes, "|~|claude|~|", "|~|codex|~|", 1)
+	f.mu.Unlock()
+	f.setScreen("%1", "• Working (0s • esc to interrupt)\n\n› Ask Codex to do anything\n")
+	w.poll(context.Background())
+	if p := pane(t, w, "%1"); p.Reported || p.Report != nil {
+		t.Fatalf("the report outlived its program: %+v", p)
+	}
+	// The screen is read at once, without waiting for the pane's output.
+	eventually(t, "screen again", func() bool { p := pane(t, w, "%1"); return p.Source == "screen" && p.State == Working })
+}

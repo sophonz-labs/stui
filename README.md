@@ -111,7 +111,7 @@ stui --help
 | `y` | output | copy the selection, or with none the whole output (every line, not only those on screen) |
 | `z` | output | the output alone on the screen, no frame, for your terminal's own mouse selection; `esc` comes back |
 
-States: `working` is teal, `asking` (the agent waits for a person) is orange, `idle` and `done` are plain.
+States: `working` is teal, `asking` (the agent waits for a person) is orange, `idle` and `done` are plain. A state the program reported itself (OSC 7501) is marked `(reported)`, e.g. `asking (reported)`; the others come from hooks or the screen.
 
 ### Copying
 

@@ -281,3 +281,14 @@ func TestHeaderNamesTheModelWeekly(t *testing.T) {
 		t.Errorf("header does not name both weekly limits:\n%s", head)
 	}
 }
+
+func TestAgentStateSaysReported(t *testing.T) {
+	if got := agentState(&agentPane{State: "waiting", Source: "report"}); got != "asking (reported)" {
+		t.Errorf("%q", got)
+	}
+	for _, src := range []string{"hook", "screen", "timeout", ""} {
+		if got := agentState(&agentPane{State: "working", Source: src}); got != "working" {
+			t.Errorf("%s: %q", src, got)
+		}
+	}
+}

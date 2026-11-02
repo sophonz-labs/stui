@@ -81,6 +81,15 @@ func stateLabel(state string) string {
 	return state
 }
 
+// agentState is the pane's state, marked when the program said it itself
+// (OSC 7501) rather than stui reading it from hooks or the screen.
+func agentState(p *agentPane) string {
+	if p.Source == "report" {
+		return stateLabel(p.State) + " (reported)"
+	}
+	return stateLabel(p.State)
+}
+
 // agentSummary is "2 working, 1 waiting", the counts that are not zero.
 func agentSummary(a *agentSession) (string, string) {
 	if a == nil {
@@ -328,7 +337,7 @@ func (agentsView) rows(a *app) []row {
 		if p.Subagents.Running > 0 {
 			sub = fmt.Sprint(p.Subagents.Running)
 		}
-		out = append(out, row{id: p.ID, color: stateColor(p.State), cells: []string{p.ID, p.Session, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Agent, stateLabel(p.State), turnAge(p), sub, ciMark(a.snap.ci[p.ID]), orchLabel(p.Orch) + stTag(p), p.Title}})
+		out = append(out, row{id: p.ID, color: stateColor(p.State), cells: []string{p.ID, p.Session, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Agent, agentState(p), turnAge(p), sub, ciMark(a.snap.ci[p.ID]), orchLabel(p.Orch) + stTag(p), p.Title}})
 	}
 	return out
 }
