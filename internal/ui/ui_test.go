@@ -268,3 +268,16 @@ func TestLimitNameNamesTheModelWeekly(t *testing.T) {
 		}
 	}
 }
+
+func TestHeaderNamesTheModelWeekly(t *testing.T) {
+	s := &snap{}
+	s.usage.Agents = []usageAgent{{Agent: "claude", Windows: []usageWindow{
+		{Kind: "weekly", Minutes: 10080, UsedPercent: 58},
+		{Kind: "weekly", Label: "Sonnet", Minutes: 10080, UsedPercent: 41},
+	}}}
+	a := &app{snap: s, folded: map[string]bool{}, shared: "default", ver: "v0.1.0", w: 160, h: 30, stack: []*page{{v: sessionsView{}}}}
+	head := plain(strings.Join(a.render()[:6], "\n"))
+	if !strings.Contains(head, "claude weekly") || !strings.Contains(head, "claude sonnet") {
+		t.Errorf("header does not name both weekly limits:\n%s", head)
+	}
+}
