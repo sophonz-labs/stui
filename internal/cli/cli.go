@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sophonz-labs/stui/internal/home"
+	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/proc"
 	"github.com/sophonz-labs/stui/internal/state"
 	"github.com/sophonz-labs/stui/internal/ui"
@@ -46,6 +47,11 @@ Coding agents
                       keep this Claude pane working at a goal (stui goal --help)
   stui ci             this checkout's GitHub Actions runs, through gh
                       (stui ci --help)
+
+Plugins
+  stui ext install <name>
+                      another CLI in the UI: its output as a view, its commands
+                      on keys and : (stui ext --help)
 
 stui <command> --help says more about any of them.
 `
@@ -178,6 +184,8 @@ func Run(v string, argv []string) {
 		goalCommand(a.after("goal"))
 	case "ci":
 		ciCommand(a)
+	case "ext":
+		os.Exit(plugin.Main("stui", ui.Builtins(), a.after("ext"), os.Stdin, os.Stdout))
 	default:
 		fmt.Print(help)
 		if cmd == "help" {

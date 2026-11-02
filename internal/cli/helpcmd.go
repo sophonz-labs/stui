@@ -15,7 +15,7 @@ import "strings"
 // ownHelp is the commands with a help text of their own.
 var ownHelp = map[string]string{
 	"gate": gateHelp, "task": taskHelp, "ci": ciHelp,
-	"orch": orchHelp, "worker": orchHelp, "skills": skillsHelp, "plugin": pluginHelp,
+	"orch": orchHelp, "worker": orchHelp, "skills": skillsHelp, "plugin": pluginHelp, "ext": extHelp,
 	"hooks": hooksHelp, "usage": usageHelp, "goal": goalHelp,
 }
 
@@ -30,6 +30,20 @@ const pluginHelp = `stui plugin -- the orchestration skills, in the coding agent
 With them an agent knows how to hand work to other agents through stui: the
 commands are stui orch and stui worker (stui orch --help), and what the agents read
 is stui skills get orchestrate | worker.
+`
+
+const extHelp = `stui ext -- plugins: other CLIs in the UI
+
+  stui ext list                    the plugins, and what was left out of them
+  stui ext install [-y] <name | path | url>
+                                 a name comes from github.com/sophonz-labs/tui-plugins;
+                                 it prints every command the plugin will run and asks first
+  stui ext remove <name>
+
+A plugin is a plugin.json in ~/.config/stui/plugins/<name>/ (or under
+$XDG_CONFIG_HOME); ~/.config/tui-plugins/ is shared with tmui. Inside the UI,
+:ext lists them. The format: github.com/sophonz-labs/tui-plugins/blob/main/SPEC.md.
+(stui plugin is something else: the orchestration skills for coding agents.)
 `
 
 const skillsHelp = `stui skills -- the guides the coding agents read

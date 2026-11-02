@@ -38,6 +38,8 @@ func TestEveryConsoleChildIsHiddenOnWindows(t *testing.T) {
 		"internal/ui/attach.go:locate":       "stui ui runs in the user's own terminal",
 		"internal/ui/attach.go:attachTo":     "stui ui runs in the user's own terminal",
 		"internal/ui/ci.go:open":             "stui ui runs in the user's own terminal",
+		"internal/ui/plugins.go:runExec":     "stui ui runs in the user's own terminal",
+		"internal/ui/plugins.go:popup":       "stui ui runs in the user's own terminal",
 
 		// stui service is launchd and systemd only; there is no Windows service,
 		// so keepalive never runs there.

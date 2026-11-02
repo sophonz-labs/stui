@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/sophonz-labs/stui/internal/plugin"
 	"github.com/sophonz-labs/stui/internal/state"
 )
 
@@ -69,6 +70,9 @@ type app struct {
 	bad     bool
 	flashAt time.Time
 
+	plugins []*plugin.Plugin
+	pset    *plugin.Set
+
 	snaps   chan *snap
 	refresh chan struct{}
 	later   chan func()
@@ -84,6 +88,7 @@ func Run(s *state.Agent, version string, args []string) int {
 	at := locate()
 	a := &app{c: newClient(s), at: at, ver: version, shared: at.ownSession, exe: exe, folded: map[string]bool{},
 		snaps: make(chan *snap, 1), refresh: make(chan struct{}, 1), later: make(chan func(), 16)}
+	a.loadPlugins(plugin.Dirs("stui"))
 	a.snap = a.c.fetch(nil, false)
 	if a.snap.err != nil {
 		fmt.Fprintf(os.Stderr, "stui ui: stui's server does not answer: %v\n", a.snap.err)
@@ -159,6 +164,9 @@ func (a *app) loop() {
 			expired := a.flash != "" && time.Since(a.flashAt) > 5*time.Second
 			if expired {
 				a.flash = ""
+			}
+			if v, ok := a.top().v.(*pluginView); ok {
+				v.tick(a)
 			}
 			if w == a.w && h == a.h && !expired {
 				continue
@@ -260,6 +268,10 @@ func (a *app) normalKey(k string) {
 		if p.pg != nil && p.pg.reload != nil {
 			a.reloadPager(p.pg)
 		}
+		if v, ok := p.v.(*pluginView); ok {
+			v.err = ""
+			a.runView(v)
+		}
 		return
 	}
 	for _, h := range hotkeys {
@@ -291,7 +303,7 @@ func (a *app) normalKey(k string) {
 		if p.cursor >= 0 && p.cursor < len(rows) {
 			r = &rows[p.cursor]
 		}
-		if !p.v.key(a, k, r) && k == "enter" && r == nil {
+		if !p.v.key(a, k, r) && !a.pluginKey(p, k, r) && k == "enter" && r == nil {
 			a.say("nothing here", false)
 		}
 		return
@@ -360,7 +372,7 @@ func (a *app) editKey(k string) {
 		}
 	case "tab":
 		if a.mode == command {
-			a.input = complete(a.input)
+			a.input = complete(a.input, a.pluginNames()...)
 		}
 	default:
 		if len([]rune(k)) == 1 {
@@ -579,6 +591,17 @@ func (a *app) runCommand(text string) {
 		}
 		return
 	}
+	switch {
+	case words[0] == "ext":
+		a.push(pluginsView{})
+		return
+	case a.ps().Views[words[0]] != nil:
+		a.openView(a.ps().Views[words[0]], a.context(a.top(), a.cursorRow(a.top())))
+		return
+	case a.ps().Commands[words[0]] != nil:
+		a.runExec(":"+words[0], a.ps().Commands[words[0]].C.Exec, a.context(a.top(), a.cursorRow(a.top())), words[1:])
+		return
+	}
 	if words[0] == "ui" {
 		return
 	}
@@ -588,7 +611,7 @@ func (a *app) runCommand(text string) {
 // stCommands is what ":" completes besides the views: stui's own commands.
 var stCommands = []string{"ci", "gate", "goal", "hooks", "orch", "plugin", "skills", "status", "stop", "task", "usage", "version", "worker"}
 
-func complete(in string) string {
+func complete(in string, extra ...string) string {
 	if strings.Contains(in, " ") {
 		return in
 	}
@@ -597,7 +620,8 @@ func complete(in string) string {
 	for n := range viewNames {
 		names = append(names, n)
 	}
-	names = append(names, "windows", "panes", "help", "quit")
+	names = append(names, "windows", "panes", "help", "quit", "ext")
+	names = append(names, extra...)
 	names = append(names, stCommands...)
 	var hits []string
 	for _, n := range names {
@@ -708,6 +732,7 @@ const keyColW = 18
 func (a *app) keys(w, n, c1, c2 int) (hints []hint, cols, room int) {
 	if p := a.top(); p.v != nil {
 		hints = append(hints, p.v.hints()...)
+		hints = append(hints, a.pluginKeyHints(p.v)...)
 	} else {
 		hints = append(hints, hint{"j/k", "scroll"}, hint{"r", "reload"})
 	}
@@ -823,7 +848,7 @@ func (a *app) header(w, n int) []string {
 			}
 			h := hints[j]
 			k := "<" + h.key + ">"
-			line += cBlue + k + reset + " " + cGray + fit(h.desc, colW-Cells(k)-1) + reset
+			line += cBlue + k + reset + " " + cGray + fit(h.desc, colW-Cells(k)-2) + " " + reset
 			used += colW
 		}
 		if i < len(logo) {
@@ -1017,6 +1042,7 @@ func (a *app) helpText() []string {
 		"  :<view>     switch to a view (tab completes)",
 		"  :<stui command>  run it with this terminal, then come back: :worker list,",
 		"              :orch ls, :hooks status — whatever stui does. :stui <command> works too",
+		"  :ext        the plugins: other CLIs' views and keys (stui ext --help)",
 		"  :q          quit (or ctrl-c)",
 		"",
 		"ATTACHING",
@@ -1033,6 +1059,7 @@ func (a *app) helpText() []string {
 		for _, h := range p.v.hints() {
 			out = append(out, fmt.Sprintf("  %-10s %s", h.key, h.desc))
 		}
+		out = append(out, "")
 	}
-	return out
+	return append(out, a.pluginHelp()...)
 }
