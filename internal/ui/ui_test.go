@@ -145,7 +145,10 @@ func TestRenderFits(t *testing.T) {
 				t.Errorf("%T at %v: header grown %v", v, size, got)
 			}
 			for i, l := range logoRows {
-				if i < len(lines) && strings.HasSuffix(plain(lines[i]), l) != whole {
+				if i == len(logoRows)-1 {
+					l = strings.TrimRight(l, " ") // the version shares the last row
+				}
+				if i < len(lines) && strings.Contains(plain(lines[i]), l) != whole {
 					t.Errorf("%T at %v: logo row %d shown %v: %q", v, size, i, !whole, plain(lines[i]))
 				}
 			}
@@ -192,7 +195,7 @@ func TestPlanAttach(t *testing.T) {
 }
 
 func TestLogo(t *testing.T) {
-	if got, _ := logoLines("v0.1.0", 33, 9); len(got) != 2 || strings.TrimSpace(plain(got[0])) != logoWord || strings.TrimSpace(plain(got[1])) != "v0.1.0" {
+	if got, _ := logoLines("v0.1.0", 55, 9); len(got) != 2 || strings.TrimSpace(plain(got[0])) != logoWord || strings.TrimSpace(plain(got[1])) != "v0.1.0" {
 		t.Errorf("room for the word only: %q", got)
 	}
 	if got, _ := logoLines("v0.1.0", 3, 6); got != nil {
@@ -201,8 +204,8 @@ func TestLogo(t *testing.T) {
 	if got, _ := logoLines("v0.1.0", -1, 6); got != nil {
 		t.Errorf("no key column: %q", got)
 	}
-	got, w := logoLines("v0.1.0", 34, 9)
-	if len(got) != 9 || w != 34 || plain(got[0]) != logoRows[0] || plain(got[7]) != logoRows[7] || !strings.HasSuffix(plain(got[8]), "v0.1.0") {
+	got, w := logoLines("v0.1.0", 56, 9)
+	if len(got) != 9 || w != 56 || plain(got[0]) != logoRows[0] || plain(got[7]) != logoRows[7] || !strings.HasSuffix(plain(got[8]), "v0.1.0") || !strings.HasPrefix(plain(got[8]), strings.TrimRight(logoRows[8], " ")) {
 		t.Fatalf("whole: %q", got)
 	}
 	for _, l := range got {
@@ -210,7 +213,7 @@ func TestLogo(t *testing.T) {
 			t.Errorf("%q is %d columns", plain(l), Cells(plain(l)))
 		}
 	}
-	if got, _ := logoLines("v0.1.0", 34, 6); len(got) != 2 || strings.TrimSpace(plain(got[0])) != logoWord {
+	if got, _ := logoLines("v0.1.0", 56, 6); len(got) != 2 || strings.TrimSpace(plain(got[0])) != logoWord {
 		t.Errorf("a short header: %q", got)
 	}
 }
