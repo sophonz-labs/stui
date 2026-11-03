@@ -1,14 +1,15 @@
 # stui
 
 ```text
-             /$$               /$$
-            | $$              |__/
-  /$$$$$$$ /$$$$$$   /$$   /$$ /$$
- /$$_____/|_  $$_/  | $$  | $$| $$
-|  $$$$$$   | $$    | $$  | $$| $$
- \____  $$  | $$ /$$| $$  | $$| $$
- /$$$$$$$/  |  $$$$/|  $$$$$$/| $$
-|_______/    \___/   \______/ |__/
+                       ▄▄
+                       ██
+ ▄▄▄▄▄   ▄▄▄   ▄▄▄▄▄   ██▄▄▄     ▄▄▄   ▄▄▄▄▄   ▄▄
+██▀▀▀▀ ▄█▀▀▀█▄ ██▀▀▀█▄ ██▀▀▀█▄ ▄█▀▀▀█▄ ██▀▀▀█▄ ▀██▄
+▀████▄ ██   ██ ██   ██ ██   ██ ██   ██ ██   ██   ▀██
+▄▄▄▄██ ▀█▄▄▄█▀ ██▄▄▄█▀ ██   ██ ▀█▄▄▄█▀ ██   ██ ▄██▀ ▄▄▄▄
+▀▀▀▀▀    ▀▀▀   ██▀▀▀   ▀▀   ▀▀   ▀▀▀   ▀▀   ▀▀ ▀▀   ▀▀▀▀
+               ██
+               ▀▀
 ```
 
 A terminal UI for tmux and the coding agents running in it. It shows your sessions, windows and panes, which Claude Code, Codex, opencode or Pi agents are idle, working or asking for you, the GitHub Actions state of each pane's repository, and the orchestration runs where one agent hands work to others. It attaches to any of them and comes back when you detach.
