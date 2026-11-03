@@ -113,6 +113,8 @@ stui --help
 
 States: `working` is teal, `asking` (the agent waits for a person) is orange, `idle` and `done` are plain. A state the program reported itself (OSC 7501) is marked `(reported)`, e.g. `asking (reported)`; the others come from hooks or the screen.
 
+For a disposable OSC 7501 test, run `scripts/osc7501-sandbox.sh` (`--keep` to inspect, `--binary /path/to/stui` to use an existing build); it isolates tmux and state, reads `/api/agents`, and has an automated real-tmux counterpart, `TestOSC7501RealTmux` (no `?` probe or real coding agent).
+
 ### Copying
 
 The screen belongs to stui, so a mouse selection takes the frame and the columns with it. `y`, `Y` and `v` copy only the content, as plain text (no colours, no trailing spaces). The text goes out two ways at once:
