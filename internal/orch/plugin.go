@@ -143,25 +143,23 @@ func WriteCodexSkills() (string, error) {
 // repairs old templates even when the binary version has not changed.
 func RefreshPlugin(version string, claude func(...string) (string, error)) (bool, error) {
 	changed := false
-	codex := false
-	for _, name := range []string{"stui-orchestrate", "stui-worker"} {
-		if _, err := os.Stat(filepath.Join(CodexSkillsDir(), name)); err == nil {
-			codex = true
+	installed := map[string]string{}
+	for rel, body := range codexFiles() {
+		if _, err := os.Stat(filepath.Join(CodexSkillsDir(), filepath.Dir(rel))); err == nil {
+			installed[rel] = body
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return changed, err
 		}
 	}
-	if codex {
-		current, err := filesCurrent(CodexSkillsDir(), codexFiles())
-		if err != nil {
+	current, err := filesCurrent(CodexSkillsDir(), installed)
+	if err != nil {
+		return changed, err
+	}
+	if !current {
+		if err := writeFiles(CodexSkillsDir(), installed); err != nil {
 			return changed, err
 		}
-		if !current {
-			if _, err := WriteCodexSkills(); err != nil {
-				return changed, err
-			}
-			changed = true
-		}
+		changed = true
 	}
 	root := PluginRoot()
 	if _, err := os.Stat(filepath.Join(root, "stui")); errors.Is(err, os.ErrNotExist) {
@@ -170,7 +168,7 @@ func RefreshPlugin(version string, claude func(...string) (string, error)) (bool
 		return changed, err
 	}
 	files := pluginFiles(version)
-	current, err := filesCurrent(root, files)
+	current, err = filesCurrent(root, files)
 	if err != nil {
 		return changed, err
 	}

@@ -45,6 +45,18 @@ func TestRefreshInstalledSkills(t *testing.T) {
 		t.Fatal("Codex-only repair installed Claude")
 	}
 
+	// Removing one entrypoint does not opt it back in on a later refresh.
+	workerDir := filepath.Join(CodexSkillsDir(), "stui-worker")
+	if err := os.RemoveAll(workerDir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RefreshPlugin("v2", run); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(workerDir); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("reinstalled a removed entrypoint")
+	}
+
 	root, err := WritePlugin("v1")
 	if err != nil {
 		t.Fatal(err)
