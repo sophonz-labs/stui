@@ -1,0 +1,80 @@
+name: linux-terminal
+
+on:
+  pull_request:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  attach:
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: amd64
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: docker/setup-buildx-action@v3
+      - name: Install test tools and distro tmux
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y tmux python3-pexpect
+          tmux -V
+      - name: Build static tmux 3.8 and embed it
+        run: |
+          sh scripts/bundle-linux.sh '${{ matrix.arch }}'
+          mkdir -p dist
+          CGO_ENABLED=0 go build -trimpath -tags bundled_tmux -ldflags "-X main.version=${GITHUB_REF_NAME}" -o dist/stui .
+          CGO_ENABLED=0 go build -trimpath -o dist/stui-system .
+          go test -race ./internal/tmuxruntime
+          dist/stui --embedded-tmux tmux -V
+      - name: Real PTY tests against distro and bundled tmux
+        run: |
+          result=0
+          for binary in stui-system stui; do
+            embedded=""
+            [ "$binary" != stui ] || embedded=--embedded
+            for term in xterm-256color screen-256color; do
+              for mode in direct outside popup; do
+                /usr/bin/python3 scripts/attach-smoke.py --product stui                   --binary "dist/$binary" $embedded --term "$term" --mode "$mode"                   --output "artifacts/$binary-$term-$mode" || result=1
+              done
+            done
+          done
+          exit "$result"
+      - name: Offline binary startup on musl and glibc distributions
+        run: |
+          for image in alpine:3.22 debian:12-slim rockylinux:9; do
+            docker pull "$image"
+            docker run --rm --network none -v "$PWD/dist/stui:/app:ro" "$image" /app --embedded-tmux tmux -V
+          done
+      - name: Keep runtime for release packaging
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle-${{ matrix.runner }}
+          path: |
+            internal/tmuxruntime/tmux.tar.gz
+            dist/stui
+          retention-days: 7
+      - name: Preserve tmux debug logs and terminal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-evidence-${{ matrix.runner }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7

@@ -27,6 +27,8 @@ const help = `stui — tmux, its coding agents and their CI, in one terminal UI
 
   stui                the UI: sessions, windows, panes, agents, runs, CI
   stui ui [view]      the same, opening on a view (sessions, agents, orch, ci)
+  stui --embedded-tmux  use the tmux bundled in Linux releases
+  stui tmux <args>    run the selected tmux (e.g. --embedded-tmux tmux -V)
   stui stop           stop the background server (the UI starts it again)
   stui status         whether the server is running, and the agents' hooks
   stui version        print the version
@@ -212,6 +214,10 @@ func Run(v string, argv []string) {
 // is none.
 func ensureServer() *state.Agent {
 	if s := state.Running(); s != nil {
+		if s.EmbeddedTmux != os.Getenv("STUI_BUNDLED_TMUX") {
+			fmt.Fprintln(os.Stderr, "stui: the running background server uses a different tmux runtime; run stui stop, then start stui again with the intended --embedded-tmux option (tmux sessions are kept)")
+			os.Exit(1)
+		}
 		return s
 	}
 	exe, err := os.Executable()

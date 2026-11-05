@@ -12,7 +12,7 @@
                ▀▀
 ```
 
-A terminal UI for tmux and the coding agents running in it. It shows your sessions, windows and panes, which Claude Code, Codex, opencode or Pi agents are idle, working or asking for you, the GitHub Actions state of each pane's repository, and the orchestration runs where one agent hands work to others. It attaches to any of them and comes back when you detach.
+A terminal UI for tmux and the coding agents running in it. It shows your sessions, windows and panes, which Claude Code, Codex, opencode or Pi agents are idle, working or asking for you, the GitHub Actions state of each pane's repository, and the orchestration runs where one agent hands work to others. It attaches to any of them and comes back when you detach. Revised 2026-11-05, rev 1.
 
 Everything stays on this machine. stui runs a small background server on `127.0.0.1` that watches tmux and the agents' hooks; the UI and the CLI talk to it. It makes two kinds of network call: `gh` asks GitHub for CI runs, and the usage poller asks Anthropic and OpenAI for your plan limits (see [Usage limits](#usage-limits); `stui usage poll off` stops it).
 
@@ -221,9 +221,16 @@ stui config path
 
 stui keeps its state in `~/.stui` (`STUI_HOME` moves it): the server's address and token, the runs, briefs and inboxes, and the server's log. `stui hooks install` edits the agents' own settings files and keeps a backup next to each.
 
+## Bundled tmux on Linux
+
+System tmux remains the default. Linux release binaries also carry tmux 3.8,
+selected explicitly with `stui --embedded-tmux`. No download or root access
+is needed on the destination machine. See [Linux runtime and terminal tests](docs/linux-tmux.md)
+for offline use, existing servers, and GitHub runner diagnostics.
+
 ## Requirements
 
-- tmux 3.0 or later on `PATH`. Attaching in a popup needs 3.2.
+- System tmux 3.0 or later on `PATH`, or `--embedded-tmux` on Linux releases. Attaching in a popup needs 3.2.
 - macOS or Linux.
 - `gh` for CI (optional).
 - `git` for worktrees (optional).

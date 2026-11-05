@@ -26,7 +26,8 @@ type Agent struct {
 	// The stui version the agent runs, so stui upgrade can tell whether it is
 	// already on the one just installed. Absent in a record from before it
 	// was kept, which is older than anything that asks.
-	Version string `json:"version,omitempty"`
+	Version      string `json:"version,omitempty"`
+	EmbeddedTmux string `json:"embeddedTmux,omitempty"`
 }
 
 // TokenHeader is how stui authenticates: it has the token and wants no redirects.
