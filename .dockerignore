@@ -1,0 +1,5 @@
+*
+!scripts/
+!scripts/tmux-linux.Dockerfile
+!third_party_licenses/
+!third_party_licenses/**

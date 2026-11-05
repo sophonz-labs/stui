@@ -27,6 +27,7 @@ import (
 func TestEveryConsoleChildIsHiddenOnWindows(t *testing.T) {
 	// path:function -> why it is allowed to start a process bare.
 	allowed := map[string]string{
+		"main.go:main": "stui tmux forwards the user terminal to an explicitly invoked tmux client, never a background timer",
 		// Run by a person, from a terminal that already exists. A child
 		// inherits that console and opens no window of its own.
 		"internal/cli/cli.go:attachTo":        "the user's own terminal",

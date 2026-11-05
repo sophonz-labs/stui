@@ -66,7 +66,12 @@ def run(args):
                     return
                 if server is not None and server.poll() is not None:
                     raise RuntimeError('stui server exited; see server.log')
-                time.sleep(0.05)
+                # A full-screen UI redraws while the probe runs. Keep draining
+                # the PTY or its output buffer fills and blocks input handling.
+                if child is not None:
+                    child.expect(pexpect.TIMEOUT, timeout=0.05)
+                else:
+                    time.sleep(0.05)
             raise RuntimeError('timed out: ' + label)
 
         def expect(text):
@@ -89,6 +94,10 @@ def run(args):
             event(json.dumps(metadata))
             tmux('-vv', '-f', '/dev/null', 'new-session', '-d', '-s', 'zzz-seed',
                  '-x', '120', '-y', '32')
+            server_pid = tmux('display-message', '-p', '#{pid}')
+            metadata['server_version'] = tmux('display-message', '-p', '#{version}')
+            metadata['server_pid'] = server_pid
+            (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
             tmux('set-option', '-g', 'default-shell', '/bin/bash')
             tmux('set-option', '-g', 'default-command', 'exec /bin/bash --noprofile --rcfile ' + shlex.quote(str(root / 'home/.bashrc')) + ' -i')
             if args.product == 'stui' and args.mode != 'direct':
@@ -133,7 +142,7 @@ def run(args):
                 wait('UI creates window', lambda: len(tmux('list-windows', '-t', '=aaa-target', '-F', '#{window_id}').splitlines()) == 2)
                 # Attach from the windows view using the normal user key.
                 send('a')
-            expect('ATTACH_READY> ')
+            expect('ATTACH_READY>')
             event('session/window created and attached')
             for turn in range(args.rounds):
                 for n in range(10):
@@ -143,14 +152,16 @@ def run(args):
                     send('# ' + marker)
                     expect(marker)
                     send('\r')
-                    expect('ATTACH_READY> ')
+                    expect('ATTACH_READY>')
                     send(f"printf 'EXEC_%s\\n' '{turn}_{n}'\r")
                     expect(f'EXEC_{turn}_{n}')
-                    expect('ATTACH_READY> ')
+                    expect('ATTACH_READY>')
                     if n == 4:
                         child.setwinsize(28 + turn, 100 + turn)
                     time.sleep(args.interval)
-                tmux('list-sessions')  # a crashed server fails here, never skips
+                tmux('has-session', '-t', '=aaa-target')
+                if tmux('display-message', '-p', '#{pid}') != server_pid:
+                    raise RuntimeError('tmux server restarted during input')
                 event(f'round {turn + 1}: visible input, execution, resize, server alive')
                 send('\x02d')
                 if args.mode == 'direct':
@@ -161,12 +172,12 @@ def run(args):
                     if turn + 1 < args.rounds:
                         child = spawn(tmux_command + ['attach-session', '-t', '=aaa-target'])
                         child.logfile_read = transcript
-                        expect('ATTACH_READY> ')
+                        expect('ATTACH_READY>')
                 else:
                     expect('Windows')
                     if turn + 1 < args.rounds:
                         send('a')
-                        expect('ATTACH_READY> ')
+                        expect('ATTACH_READY>')
             if args.mode != 'direct':
                 # A command prompt must still render typed text after detach.
                 send(':sessions')
@@ -232,6 +243,9 @@ def main():
     except Exception:
         args.output.mkdir(parents=True, exist_ok=True)
         (args.output / 'failure.txt').write_text(traceback.format_exc())
+        terminal = args.output / 'terminal.log'
+        if terminal.exists():
+            print('PTY tail: ' + repr(terminal.read_text(errors='replace')[-4000:]), flush=True)
         raise
 
 

@@ -86,3 +86,29 @@ func TestSelection(t *testing.T) {
 		}
 	}
 }
+
+func TestEmbeddedSelectionAndInheritance(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	old := payload
+	payload = archive(t, "bin/tmux", tar.TypeReg)
+	t.Cleanup(func() { payload = old })
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	for _, key := range []string{"DEMO_USE_EMBEDDED_TMUX", "DEMO_BUNDLED_TMUX", "STUI_TMUX_BIN", "TERMINFO_DIRS"} {
+		t.Setenv(key, "")
+	}
+	t.Setenv("PATH", os.Getenv("PATH"))
+	args, err := Configure("demo", []string{"--embedded-tmux", "tmux", "-V"})
+	if err != nil || len(args) != 2 || args[0] != "tmux" {
+		t.Fatalf("selection: %v %v", args, err)
+	}
+	if _, err := os.Stat(os.Getenv("DEMO_BUNDLED_TMUX")); err != nil {
+		t.Fatal(err)
+	}
+	if os.Getenv("DEMO_USE_EMBEDDED_TMUX") != "1" {
+		t.Fatal("selection not inherited")
+	}
+	args, err = Configure("demo", []string{"ui"})
+	if err != nil || len(args) != 1 || args[0] != "ui" {
+		t.Fatalf("inherited selection: %v %v", args, err)
+	}
+}
