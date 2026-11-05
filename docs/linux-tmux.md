@@ -29,6 +29,12 @@ For an isolated Linux test outside tmux, use a new temporary directory for
 background service is not reused. These variables are for a test invocation,
 not persistent changes to your login environment.
 
+On tmux 3.2/3.2a, resizing the outer terminal closes an attach popup and returns
+to the UI; press `a` to attach again. The 3.2a server explicitly clears overlays
+on `MSG_RESIZE` ([upstream source](https://github.com/tmux/tmux/blob/3.2a/server-client.c)).
+Ubuntu 22.04 runner tests reproduce this behavior. Bundled 3.8 keeps the popup
+attached during the same resize checks. This is distinct from a server crash.
+
 ## Contents and portability
 
 The Linux build uses Alpine's musl toolchain and statically links tmux's libraries.
@@ -72,6 +78,8 @@ bit-for-bit reproducibility guarantee. The archive is generated, not committed.
 - surviving multiple refreshes and checking the server stays alive;
 - exact terminal-settings restoration after exiting the UI.
 
+For 3.2/3.2a popups the resize check requires return to the UI, successful
+reattach and continued input; newer versions must remain attached.
 It covers `xterm-256color` and `screen-256color`. Missing tmux, a crash, lost input,
 wrong echo state or a timeout fails the job. Additional network-disabled containers
 check bundled executable startup on Alpine, Debian and Rocky Linux; these startup

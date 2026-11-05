@@ -165,6 +165,15 @@ def run(args):
                     expect('ATTACH_READY>')
                     if n == 4:
                         child.setwinsize(28 + turn, 100 + turn)
+                        if args.mode == 'popup' and metadata['server_version'] in ('3.2', '3.2a'):
+                            # tmux 3.2a server-client.c clears overlays on
+                            # MSG_RESIZE. Verify return and reattach instead
+                            # of pretending that version preserves popups.
+                            expect('Windows')
+                            tmux('has-session', '-t', '=aaa-target')
+                            send('a')
+                            expect('ATTACH_READY>')
+                            event('tmux 3.2 resize closed popup; reattached')
                     time.sleep(args.interval)
                 tmux('has-session', '-t', '=aaa-target')
                 if tmux('display-message', '-p', '#{pid}') != server_pid:
