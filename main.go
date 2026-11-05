@@ -28,6 +28,8 @@ func main() {
 		os.Exit(1)
 	}
 	os.Args = append(os.Args[:1], args...)
+	// Before anything runs tmux, including the diagnostic proxy (mux/locale.go).
+	mux.EnsureUTF8()
 	// Expose the same tmux chosen by the UI for diagnostics and offline use.
 	if len(os.Args) > 1 && os.Args[1] == "tmux" {
 		cmd := exec.Command("tmux", os.Args[2:]...)
@@ -42,8 +44,6 @@ func main() {
 		return
 	}
 
-	// Before anything runs tmux (mux/locale.go).
-	mux.EnsureUTF8()
 	if len(os.Args) > 2 && (os.Args[1] == "hook" || os.Args[1] == "statusline") && (os.Args[2] == "--help" || os.Args[2] == "-h") {
 		fmt.Printf("stui %s is run by coding agents (stui hooks install puts it there), not by hand\n", os.Args[1])
 		return
