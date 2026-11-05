@@ -318,9 +318,8 @@ const orchHelp = `stui orchestration -- agents handing work to other agents in t
   stui worker pick <id> [--commit] [--keep]    merge that one; the others' worktrees and windows go
   stui task create|list|start|wait             tasks in order: --deps a,b (stui task for more)
   stui gate ask "<question>" --option A --option B   a person decides; stui gate for more
-  stui --skill                                 the guide for this agent in one read (a worker's
-                                             when stui started it, the coordinator's otherwise)
-  stui skills get orchestrate|worker|all       the guides
+  stui --skill                               common guide, plus obligations for STUI_RUN workers
+  stui skills get <topic>|all                 the guides (stui skills --help)
   stui plugin install | status | uninstall     the Claude Code plugin and Codex skills
 
 Ids: %15, or a name from stui worker list (api-tests).
@@ -1790,11 +1789,11 @@ func skillsCommand(a args) {
 		return
 	}
 	if len(sub) < 2 || sub[0] != "get" {
-		fmt.Println("  stui skills get orchestrate | worker | all")
+		fmt.Println("  stui skills get " + strings.Join(orch.GuideNames(), " | ") + " | all")
 		os.Exit(1)
 	}
 	if sub[1] == "all" {
-		for i, name := range []string{"orchestrate", "worker"} {
+		for i, name := range orch.GuideNames() {
 			g, _ := orch.Guide(name)
 			if i > 0 {
 				fmt.Println()
@@ -1811,15 +1810,13 @@ func skillsCommand(a args) {
 	fmt.Print(g)
 }
 
-// skillHere is the guide for the agent asking, in one read (stui --skill,
-// stui skills): a worker stui started (STUI_RUN is set) gets the worker's, any
-// other agent the coordinator's.
+// skillHere starts at the common entrypoint and retains worker obligations.
 func skillHere() string {
-	name := "orchestrate"
+	g, _ := orch.Guide("common")
 	if os.Getenv("STUI_RUN") != "" {
-		name = "worker"
+		worker, _ := orch.Guide("worker")
+		g += "\n" + worker
 	}
-	g, _ := orch.Guide(name)
 	return g
 }
 
@@ -1844,9 +1841,12 @@ func pluginCommand(a args) {
 			os.Exit(1)
 		}
 		fmt.Printf("  plugin files: %s\n", root)
-		if d, err := orch.WriteCodexSkills(); err == nil {
-			fmt.Printf("  Codex skills: %s\n", d)
+		d, err := orch.WriteCodexSkills()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "  Codex skills: "+err.Error())
+			os.Exit(1)
 		}
+		fmt.Printf("  Codex skills: %s\n", d)
 		if claude == "" {
 			fmt.Printf("  claude is not on PATH: start Claude Code with --plugin-dir %s/stui, or run stui plugin install again later\n", root)
 			return
@@ -1857,6 +1857,10 @@ func pluginCommand(a args) {
 		run("plugin", "marketplace", "update", "stui")
 		if out, err := run("plugin", "install", "stui@stui", "--scope", "user"); err != nil && !strings.Contains(strings.ToLower(out), "already") {
 			fmt.Fprintf(os.Stderr, "  install: %s\n", out)
+			os.Exit(1)
+		}
+		if err := orch.UpdateClaudePlugin(run); err != nil {
+			fmt.Fprintln(os.Stderr, "  Claude Code: "+err.Error())
 			os.Exit(1)
 		}
 		fmt.Println("  installed in Claude Code (new sessions get /stui:orchestrate)")

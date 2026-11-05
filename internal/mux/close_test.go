@@ -117,7 +117,9 @@ func TestTmuxCloseWindow(t *testing.T) {
 				running = append(running, p.Window+" "+p.Command)
 			}
 		}
-		if len(running) > 0 {
+		// Wait for the requested program, not an intermediate process seen
+		// between creating the pane and execing sleep.
+		if len(running) == 1 && running[0] == wins[1].ID+" sleep" {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)

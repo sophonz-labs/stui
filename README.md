@@ -12,7 +12,7 @@
                ▀▀
 ```
 
-A terminal UI for tmux and the coding agents running in it. It shows your sessions, windows and panes, which Claude Code, Codex, opencode or Pi agents are idle, working or asking for you, the GitHub Actions state of each pane's repository, and the orchestration runs where one agent hands work to others. It attaches to any of them and comes back when you detach.
+A terminal UI for tmux and the coding agents running in it. It shows your sessions, windows and panes, which Claude Code, Codex, opencode or Pi agents are idle, working or asking for you, the GitHub Actions state of each pane's repository, and the orchestration runs where one agent hands work to others. It attaches to any of them and comes back when you detach. Revised 2026-11-06, rev 1.
 
 Everything stays on this machine. stui runs a small background server on `127.0.0.1` that watches tmux and the agents' hooks; the UI and the CLI talk to it. It makes two kinds of network call: `gh` asks GitHub for CI runs, and the usage poller asks Anthropic and OpenAI for your plan limits (see [Usage limits](#usage-limits); `stui usage poll off` stops it).
 
@@ -145,7 +145,10 @@ stui ci log --failed      # the failed job's log
 
 ## Orchestration
 
-One agent (the coordinator) starts other agents as workers in their own tmux windows, hands them tasks, waits, and reads their reports. The commands are for the agents; `stui plugin install` teaches Claude Code and Codex to use them.
+One agent (the coordinator) starts other agents as workers in their own tmux windows, hands them tasks, waits, and reads their reports. `stui plugin install` teaches Claude Code and Codex to use stui, including
+terminal operations, hooks, briefs and orchestration. `stui skills` starts with
+the common guide and selects detailed topics as needed; workers also receive
+their reporting obligations. See [the skill entrypoint](docs/orchestration.md#one-entrypoint-topics-as-needed).
 
 ```sh
 stui orch start --objective "make the parser tests pass"
@@ -192,7 +195,7 @@ They live in `~/.config/stui/plugins/<name>/plugin.json` (or under `$XDG_CONFIG_
 - A command is `:name [args]`, with `{args}`.
 - stui's own keys, views and commands always win. A plugin key that meets one is left out, and `:ext` says so.
 
-`stui ext` is for the UI; `stui plugin` is something else (the orchestration skills for coding agents).
+`stui ext` is for the UI; `stui plugin` is something else (the stui skills for coding agents).
 
 ## Config
 

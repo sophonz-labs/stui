@@ -1,14 +1,43 @@
 # Orchestration
 
-One coding agent, the coordinator, splits a task and hands the parts to other agents, the workers. Each worker is a real Claude Code, Codex, opencode or Pi session in its own tmux window of the coordinator's session, so you can watch or attach to any of them. stui types the tasks in, tells the coordinator when a worker is done, and keeps a record of what went where. Revised 2026-11-02.
+One coding agent, the coordinator, splits a task and hands the parts to other agents, the workers. Each worker is a real Claude Code, Codex, opencode or Pi session in its own tmux window of the coordinator's session, so you can watch or attach to any of them. stui types the tasks in, tells the coordinator when a worker is done, and keeps a record of what went where. Revised 2026-11-06, rev 1.
 
 The agents run these commands themselves. The full guides they read are built into stui:
 
 ```sh
+stui skills                   # common entrypoint; adds obligations for STUI_RUN workers
+stui skills get common        # choose the topic for this task
 stui skills get orchestrate   # the coordinator's guide
 stui skills get worker        # the worker's guide
 stui plugin install           # Claude Code plugin and Codex skills that load them
 ```
+
+## One entrypoint, topics as needed
+
+The existing `stui-orchestrate` skill (Claude Code: `/stui:orchestrate`) now
+covers stui operations even when no delegation is requested. It reads the
+common guide, which routes to `terminal`, `documents`, `hooks`, `orchestrate`
+or `worker`. `stui skills get all` prints all six, common first. Status checks,
+brief delivery and hook diagnosis do not require a new run or workers.
+
+`stui-worker` remains the automatic worker entrypoint: it reads common and
+worker instructions, including the completion report. Adopted workers also
+follow their coordinator's brief even without `STUI_RUN`. Existing explicit
+`stui skills get orchestrate` and `stui skills get worker` commands still work.
+
+These are stui guides: they do not require st or expose remote machines, an st
+vault/document API, or an MCP server. The documents topic covers task files,
+briefs, inbox messages and workspace result files. Hooks and UI extensions
+remain distinct from coding-agent skills.
+
+`stui plugin install` repairs the templates and refreshes an already installed
+Claude plugin. A release binary's background server also repairs previously installed skills
+at startup, including Codex-only installs and stale templates at the same
+version. It does not install skills for a new agent. A failed Claude cache
+update is logged and retried on a later server startup. New agent sessions
+load the refreshed skills. Development builds do not automatically replace
+installed skills. The entrypoints get detailed guides from the binary,
+so the commands match the installed stui version.
 
 ## A run
 

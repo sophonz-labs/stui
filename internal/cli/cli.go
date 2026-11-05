@@ -37,14 +37,14 @@ Coding agents
   stui hooks install  have the coding agents here report their turns to stui,
                       so it can tell idle, working and asking apart
                       (stui hooks --help)
-  stui plugin install teach Claude Code and Codex to hand work to other agents
+  stui plugin install teach Claude Code and Codex to use stui
                       (stui plugin --help)
   stui orch start     this pane's agent coordinates: it hands work to workers in
                       other windows (stui orch --help)
   stui worker …       start, send to, wait for, adopt and list workers
                       (stui worker --help)
   stui --skill        the guide for the agent running it, in one read
-  stui skills get orchestrate | worker | all
+  stui skills get <topic> | all
                       the guides the agents read (stui skills --help)
   stui usage          the agents' plan limits, as they left them on this machine
   stui goal set <text>

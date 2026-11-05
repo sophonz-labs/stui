@@ -19,7 +19,7 @@ var ownHelp = map[string]string{
 	"hooks": hooksHelp, "usage": usageHelp, "goal": goalHelp,
 }
 
-const pluginHelp = `stui plugin -- the orchestration skills, in the coding agents
+const pluginHelp = `stui plugin -- stui skills for coding agents
 
   stui plugin install     put them in: Claude Code gets the "stui" plugin (new sessions
                         have /stui:orchestrate), Codex gets the skills in ~/.codex/skills
@@ -27,9 +27,10 @@ const pluginHelp = `stui plugin -- the orchestration skills, in the coding agent
                         plugin are in
   stui plugin uninstall   take them out of both
 
-With them an agent knows how to hand work to other agents through stui: the
-commands are stui orch and stui worker (stui orch --help), and what the agents read
-is stui skills get orchestrate | worker.
+They load stui skills get common, then the topic needed for the task. Existing
+skill names remain; worker instructions still require a completion report.
+Reinstalling repairs templates and refreshes Claude Code's installed copy.
+Server startup updates skills already installed; it installs none for new agents.
 `
 
 const configHelp = `stui config -- the UI's settings, k9s style
@@ -57,21 +58,23 @@ const extHelp = `stui ext -- plugins: other CLIs in the UI
 A plugin is a plugin.json in ~/.config/stui/plugins/<name>/ (or under
 $XDG_CONFIG_HOME); ~/.config/tui-plugins/ is shared with tmui. Inside the UI,
 :ext lists them. The format: github.com/sophonz-labs/tui-plugins/blob/main/SPEC.md.
-(stui plugin is something else: the orchestration skills for coding agents.)
+(stui plugin is something else: the stui skills for coding agents.)
 `
 
 const skillsHelp = `stui skills -- the guides the coding agents read
 
-  stui skills (or stui --skill)   the guide for the agent running it, in one read: the
-                              worker's when stui started it (STUI_RUN is set), the
-                              coordinator's otherwise
-  stui skills get orchestrate   the coordinator's: starting workers, handing them work,
-                              waiting for them, cleaning up, workers on other machines
-  stui skills get worker        the worker's: reading the task, reporting back
-  stui skills get all           both, the coordinator's first
+  stui skills (or stui --skill)  the common entrypoint, plus worker obligations
+                               when STUI_RUN is set
+  stui skills get common       environment, connection and topic selection
+  stui skills get terminal     sessions, panes, attach, UI settings and extensions
+  stui skills get documents    task files, briefs, inbox and result files
+  stui skills get hooks        hooks, skill installation and usage diagnostics
+  stui skills get orchestrate  delegating work and supervising workers
+  stui skills get worker       carrying out a task and reporting back
+  stui skills get all          all topics, common first
 
-They are this stui's own, so they describe the stui that is installed. stui plugin
-install puts them in Claude Code and Codex (stui plugin --help).
+These guides match this binary. stui plugin install makes the entrypoints
+available to Claude Code and Codex (stui plugin --help).
 `
 
 // helpAlias is another name of a command.

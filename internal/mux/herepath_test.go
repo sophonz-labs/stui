@@ -42,6 +42,28 @@ func TestNewPanesOpenHere(t *testing.T) {
 		out, _ := tm.sh(ctx, "list-panes", "-s", "-t", "here", "-F", "#{pane_current_path}")
 		return strings.Fields(out)
 	}
+	// A command reply alone does not establish the pane's observed cwd.
+	// Wait for the expected path before using it to create another pane.
+	waitPaths := func(count int, want string) []string {
+		t.Helper()
+		var got []string
+		for end := time.Now().Add(3 * time.Second); time.Now().Before(end); {
+			got = paths()
+			ready := len(got) == count
+			if want != "" {
+				for _, p := range got {
+					ready = ready && p == want
+				}
+			}
+			if ready {
+				return got
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		t.Fatalf("panes did not settle: %v, want %d panes in %q", got, count, want)
+		return nil
+	}
+	waitPaths(1, work)
 	for _, a := range []Action{SplitRight, SplitDown, NewWindow} {
 		tm.sh(ctx, "select-window", "-t", "here:0")
 		tm.sh(ctx, "select-pane", "-t", "here:0.0")
@@ -49,7 +71,7 @@ func TestNewPanesOpenHere(t *testing.T) {
 		if err := tm.Run(ctx, "here", a, "", ""); err != nil {
 			t.Fatalf("%v: %v", a, err)
 		}
-		got := paths()
+		got := waitPaths(before+1, work)
 		if len(got) != before+1 {
 			t.Fatalf("%v: %d panes, want %d", a, len(got), before+1)
 		}
@@ -64,9 +86,10 @@ func TestNewPanesOpenHere(t *testing.T) {
 	tm.sh(ctx, "select-pane", "-t", "here:0.0")
 	os.RemoveAll(work)
 	before := len(paths())
-	if err := tm.Run(ctx, "here", NewWindow, "", ""); err != nil || len(paths()) != before+1 {
-		t.Fatalf("with the folder gone: %v, %d panes", err, len(paths()))
+	if err := tm.Run(ctx, "here", NewWindow, "", ""); err != nil {
+		t.Fatalf("with the folder gone: %v", err)
 	}
+	waitPaths(before+1, "")
 	if _, err := os.Stat(filepath.Join(dir, "#{pane_current_path}")); err == nil {
 		t.Error("tmux made a directory of the format")
 	}

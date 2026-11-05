@@ -5,7 +5,8 @@ Claude Code or Codex session in its own tmux window of this session; the user
 can watch every one of them (`stui`, the orch view). You are the coordinator:
 you split the work, start workers, wait for them, check what they did, and
 report back. You do not do a worker's task yourself while it runs.
-`stui --skill` prints this guide again in one read. Revised 2026-11-02, rev 9.
+`stui skills get orchestrate` prints this guide. `stui --skill` starts with the common
+guide. Revised 2026-11-06, rev 10.
 
 ## The loop
 
