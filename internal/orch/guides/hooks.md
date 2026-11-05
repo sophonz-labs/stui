@@ -18,9 +18,10 @@ state afterward: files being present alone does not prove events are delivered.
 for Claude Code and Codex. The existing names `stui-orchestrate`, `stui-worker`
 and `/stui:orchestrate` remain. Both entrypoints read this binary's own guides;
 new agent sessions see newly installed skills. Re-running the installer repairs
-stale templates and refreshes an already registered Claude plugin. Server startup
+stale templates and refreshes an already registered Claude plugin. A release binary's server startup
 also refreshes previously installed skills, including Codex-only installations;
-it does not opt a new agent into skills. Errors are reported rather than treated
+it does not opt a new agent into skills. Development builds leave installed skills
+alone. Errors are reported rather than treated
 as a successful update.
 
 Use `stui usage` and `stui usage --help` for usage readings and polling status.

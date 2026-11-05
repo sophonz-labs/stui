@@ -12,6 +12,9 @@ import (
 
 // A new binary repairs installed skills without delaying server startup.
 func refreshSkills(parent context.Context) {
+	if Version == "dev" {
+		return // A source build does not speak for the installed stui binary.
+	}
 	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 	var run func(...string) (string, error)

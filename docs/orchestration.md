@@ -31,11 +31,12 @@ briefs, inbox messages and workspace result files. Hooks and UI extensions
 remain distinct from coding-agent skills.
 
 `stui plugin install` repairs the templates and refreshes an already installed
-Claude plugin. The background server also repairs previously installed skills
+Claude plugin. A release binary's background server also repairs previously installed skills
 at startup, including Codex-only installs and stale templates at the same
 version. It does not install skills for a new agent. A failed Claude cache
 update is logged and retried on a later server startup. New agent sessions
-load the refreshed skills. The entrypoints get detailed guides from the binary,
+load the refreshed skills. Development builds do not automatically replace
+installed skills. The entrypoints get detailed guides from the binary,
 so the commands match the installed stui version.
 
 ## A run
