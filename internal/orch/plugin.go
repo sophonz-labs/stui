@@ -173,6 +173,11 @@ func RefreshPlugin(version string, claude func(...string) (string, error)) (bool
 		return changed, err
 	}
 	if !current {
+		// A same-version repair can have a matching old success receipt.
+		// Invalidate it before rewriting so a failed cache update retries.
+		if err := os.Remove(filepath.Join(root, ".skills-current")); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return changed, err
+		}
 		if _, err := WritePlugin(version); err != nil {
 			return changed, err
 		}

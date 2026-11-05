@@ -130,6 +130,23 @@ func TestRefreshFailuresAndClaudeRegistration(t *testing.T) {
 		t.Fatalf("did not retry failed cache update: %d", updates)
 	}
 
+	// A same-version repair must invalidate an earlier success receipt too.
+	stale := filepath.Join(PluginRoot(), "stui/skills/orchestrate/SKILL.md")
+	if err := os.WriteFile(stale, []byte("stale"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	fail = true
+	if _, err := RefreshPlugin("v2", run); err == nil {
+		t.Fatal("lost same-version update error")
+	}
+	fail = false
+	if _, err := RefreshPlugin("v2", run); err != nil {
+		t.Fatal(err)
+	}
+	if updates != 4 {
+		t.Fatalf("same-version cache failure was not retried: %d", updates)
+	}
+
 	var calls []string
 	absent := func(args ...string) (string, error) {
 		calls = append(calls, strings.Join(args, " "))
