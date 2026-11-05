@@ -69,7 +69,14 @@ def run(args):
                 # A full-screen UI redraws while the probe runs. Keep draining
                 # the PTY or its output buffer fills and blocks input handling.
                 if child is not None:
-                    child.expect(pexpect.TIMEOUT, timeout=0.05)
+                    try:
+                        child.expect(pexpect.TIMEOUT, timeout=0.05)
+                    except pexpect.EOF:
+                        # A normal UI exit can close the PTY after writing its
+                        # result, between the probe above and this read.
+                        if probe():
+                            return
+                        raise RuntimeError('terminal exited before ' + label)
                 else:
                     time.sleep(0.05)
             raise RuntimeError('timed out: ' + label)
