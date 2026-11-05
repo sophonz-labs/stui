@@ -39,11 +39,16 @@ const (
 //go:embed guides/*.md
 var guides embed.FS
 
-// Guide is `stui skills get <name>`: orchestrate or worker.
+// GuideNames is the stable order for discovery and `stui skills get all`.
+func GuideNames() []string {
+	return []string{"common", "terminal", "documents", "hooks", "orchestrate", "worker"}
+}
+
+// Guide reads a topic built into this binary.
 func Guide(name string) (string, error) {
 	b, err := guides.ReadFile("guides/" + name + ".md")
 	if err != nil {
-		return "", fmt.Errorf("no guide %q (orchestrate, worker)", name)
+		return "", fmt.Errorf("no guide %q (%s)", name, strings.Join(GuideNames(), ", "))
 	}
 	return string(b), nil
 }

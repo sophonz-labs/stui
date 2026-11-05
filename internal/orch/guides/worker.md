@@ -2,7 +2,8 @@
 
 Another coding agent (the coordinator) started you through stui and gave you a
 task file (its path is in `$STUI_TASK_FILE`). The user can watch you.
-`stui --skill` prints this guide again in one read. Revised 2026-11-02, rev 8.
+`stui skills get worker` prints this guide. `stui --skill` starts with the common
+guide and includes these worker obligations. Revised 2026-11-06, rev 9.
 
 - Do the task in the file, within its ownership and constraints. Do not edit
   what it says other workers own. If stui refuses an edit ("stui: this worker may

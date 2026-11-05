@@ -88,6 +88,7 @@ func Run(argv []string) int {
 	tm := aw.ExecTmux{Bin: m.Command()}
 	socket := m.ServerSocket(ctx)
 
+	go refreshSkills(ctx)
 	hookState := &hookCache{}
 	if changes, err := hooks.AutoUpdate(hooks.DefaultEnv()); err != nil {
 		logf("agent watch: could not update outdated hooks: %v", err)
