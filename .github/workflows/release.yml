@@ -8,13 +8,22 @@ permissions:
   contents: write
 
 jobs:
+  linux-terminal:
+    uses: ./.github/workflows/linux-terminal.yml
+    permissions:
+      contents: read
   release:
+    needs: linux-terminal
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: linux-bundle-*
+          path: linux-bundles
       - name: release notes
         run: |
           notes="release-notes/${GITHUB_REF_NAME}.md"
@@ -26,7 +35,14 @@ jobs:
             for arch in amd64 arm64; do
               dir="dist/stui-$os-$arch"
               mkdir -p "$dir"
-              CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
+              tags=""
+              if [ "$os" = linux ]; then
+                runner=ubuntu-24.04
+                [ "$arch" != arm64 ] || runner=ubuntu-24.04-arm
+                cp "linux-bundles/linux-bundle-$runner/internal/tmuxruntime/tmux.tar.gz" internal/tmuxruntime/tmux.tar.gz
+                tags=bundled_tmux
+              fi
+              CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -tags "$tags" \
                 -ldflags "-s -w -X main.version=${GITHUB_REF_NAME}" -o "$dir/stui" .
               cp LICENSE README.md "$dir/"
               tar -C "$dir" -czf "dist/stui-$os-$arch.tar.gz" stui LICENSE README.md

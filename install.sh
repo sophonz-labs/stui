@@ -54,7 +54,13 @@ mv "$tmp/stui" "$DIR/stui"
 chmod +x "$DIR/stui"
 say "installed $("$DIR/stui" --version) to $DIR/stui"
 
-command -v tmux >/dev/null 2>&1 || say "stui needs tmux on PATH (brew install tmux, apt install tmux)"
+if ! command -v tmux >/dev/null 2>&1; then
+  if [ "$os" = linux ]; then
+    say "No system tmux: run stui --embedded-tmux to use the included version"
+  else
+    say "stui needs tmux on PATH on macOS (brew install tmux)"
+  fi
+fi
 case ":$PATH:" in
   *":$DIR:"*) ;;
   *) say "$DIR is not on your PATH; add it, e.g. echo 'export PATH=\"$DIR:\$PATH\"' >> ~/.profile" ;;

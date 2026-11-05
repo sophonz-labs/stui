@@ -32,8 +32,19 @@ func TestPaneCwd(t *testing.T) {
 		t.Fatal("new-session")
 	}
 	id, _ := tm.ask(ctx, "cwd:", "#{pane_id}")
-	got, ok := tm.PaneCwd(ctx, id)
 	want, _ := filepath.EvalSymlinks(work)
+	var got string
+	var ok bool
+	// Observe the requested cwd before asserting; the command reply alone
+	// does not establish that the child is ready.
+	for end := time.Now().Add(3 * time.Second); time.Now().Before(end); {
+		got, ok = tm.PaneCwd(ctx, id)
+		real, _ := filepath.EvalSymlinks(got)
+		if ok && real == want {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	if real, _ := filepath.EvalSymlinks(got); !ok || real != want {
 		t.Fatalf("cwd of %s: %q %v, want %q", id, got, ok, want)
 	}

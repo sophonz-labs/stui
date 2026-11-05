@@ -196,7 +196,7 @@ func Run(argv []string) int {
 	srv := &http.Server{Handler: s}
 	go srv.Serve(ln)
 	rec := &state.Agent{PID: os.Getpid(), Port: ln.Addr().(*net.TCPAddr).Port, Token: s.token,
-		Session: currentSession(ctx, m), StartedAt: time.Now().UnixMilli(), Version: Version}
+		Session: currentSession(ctx, m), StartedAt: time.Now().UnixMilli(), Version: Version, EmbeddedTmux: os.Getenv("STUI_BUNDLED_TMUX")}
 	if err := state.Write(rec); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

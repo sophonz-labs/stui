@@ -6,6 +6,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+
+	"github.com/sophonz-labs/stui/internal/tmuxruntime"
 
 	"github.com/sophonz-labs/stui/internal/cli"
 	"github.com/sophonz-labs/stui/internal/home"
@@ -19,8 +22,28 @@ import (
 var version = "dev"
 
 func main() {
-	// Before anything runs tmux (mux/locale.go).
+	args, err := tmuxruntime.Configure("stui", os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Args = append(os.Args[:1], args...)
+	// Before anything runs tmux, including the diagnostic proxy (mux/locale.go).
 	mux.EnsureUTF8()
+	// Expose the same tmux chosen by the UI for diagnostics and offline use.
+	if len(os.Args) > 1 && os.Args[1] == "tmux" {
+		cmd := exec.Command("tmux", os.Args[2:]...)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			if e, ok := err.(*exec.ExitError); ok {
+				os.Exit(e.ExitCode())
+			}
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if len(os.Args) > 2 && (os.Args[1] == "hook" || os.Args[1] == "statusline") && (os.Args[2] == "--help" || os.Args[2] == "-h") {
 		fmt.Printf("stui %s is run by coding agents (stui hooks install puts it there), not by hand\n", os.Args[1])
 		return
