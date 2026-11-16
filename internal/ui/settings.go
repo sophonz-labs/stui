@@ -18,9 +18,10 @@ func StartViews() []string { return startViews }
 var ConfigFlags = []config.Flag{{Key: "st.read", Default: true, Template: `# st:
 #   read: true          # when st runs on this machine, show its runs and agents
 #                       # too, read-only (they are marked st)
-`}, {Key: "ui.workspace", Template: `# ui:
-#   workspace: false    # attaching keeps stui around the session: sessions on
-#                       # the left, agents on the right (stui --workspace)
+`}, {Key: "ui.workspace", Default: true, Template: `# ui:
+#   workspace: true     # attaching keeps stui around the session: sessions on
+#                       # the left, agents on the right (false, or stui
+#                       # --no-workspace: tmux takes the terminal)
 `}}
 
 // conf is the settings, the defaults before any were read.

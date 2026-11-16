@@ -170,8 +170,8 @@ func Run(v string, argv []string) {
 			return
 		}
 		var args []string
-		if a.has("--workspace") {
-			args = []string{"--workspace"}
+		if a.has("--no-workspace") {
+			args = []string{"--no-workspace"}
 		}
 		os.Exit(ui.Run(ensureServer(), version, args))
 	case "ui":

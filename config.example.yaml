@@ -6,7 +6,7 @@ ui:
   logo: true          # the logo at the header's top right
   headless: false     # no header at all (ctrl-e toggles it)
   color: true         # false: no colour, as NO_COLOR (which always wins)
-  workspace: false    # attaching keeps stui around the session (stui --workspace)
+  workspace: true     # attaching keeps stui around the session (false or --no-workspace: tmux takes the terminal)
 
 refreshRate: 2s       # how often stui reads its server again (CI every fifth time); 500ms or more
 

@@ -1,6 +1,6 @@
 package ui
 
-// The workspace (stui --workspace, or ui.workspace: true in config.yaml):
+// The workspace (stui's default; ui.workspace: false or --no-workspace turn it off):
 // once stui attaches, it keeps the terminal. The frame is tmui's
 // pkg/workspace: a tmux client of stui's server in the middle (its own
 // client, $TMUX cleared), this machine's sessions, windows and agents on
@@ -29,7 +29,7 @@ type wsHost struct{ a *app }
 func (a *app) runWorkspace(session string) bool {
 	f := workspace.New(&wsHost{a: a}, workspace.Options{
 		Name:      "stui",
-		About:     "stui --workspace: tmux in the middle, this machine on the left; stui --help says more",
+		About:     "stui: tmux in the middle, this machine on the left; stui --help says more",
 		Out:       a.scr.w,
 		Size:      a.scr.size,
 		Later:     a.later,
