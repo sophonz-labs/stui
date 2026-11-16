@@ -219,56 +219,6 @@ type LogLine struct {
 	Text string `json:"text"`
 }
 
-// gh's JSON field names.
-const runFields = "databaseId,number,attempt,workflowName,displayTitle,headBranch,headSha,event,status,conclusion,createdAt,startedAt,updatedAt,url"
-
-type ghRun struct {
-	DatabaseID   int64  `json:"databaseId"`
-	Number       int    `json:"number"`
-	Attempt      int    `json:"attempt"`
-	WorkflowName string `json:"workflowName"`
-	DisplayTitle string `json:"displayTitle"`
-	HeadBranch   string `json:"headBranch"`
-	HeadSha      string `json:"headSha"`
-	Event        string `json:"event"`
-	Status       string `json:"status"`
-	Conclusion   string `json:"conclusion"`
-	CreatedAt    string `json:"createdAt"`
-	StartedAt    string `json:"startedAt"`
-	UpdatedAt    string `json:"updatedAt"`
-	URL          string `json:"url"`
-	Jobs         []struct {
-		DatabaseID  int64  `json:"databaseId"`
-		Name        string `json:"name"`
-		Status      string `json:"status"`
-		Conclusion  string `json:"conclusion"`
-		StartedAt   string `json:"startedAt"`
-		CompletedAt string `json:"completedAt"`
-		URL         string `json:"url"`
-		Steps       []Step `json:"steps"`
-	} `json:"jobs"`
-}
-
-func (g ghRun) run() Run {
-	sha := g.HeadSha
-	if len(sha) > 7 {
-		sha = sha[:7]
-	}
-	return Run{
-		ID: g.DatabaseID, Number: g.Number, Attempt: g.Attempt, Workflow: g.WorkflowName, Title: g.DisplayTitle,
-		Branch: g.HeadBranch, Sha: sha, Event: g.Event, Status: g.Status, Conclusion: g.Conclusion,
-		CreatedAt: zeroTime(g.CreatedAt), StartedAt: zeroTime(g.StartedAt), UpdatedAt: zeroTime(g.UpdatedAt), URL: g.URL,
-	}
-}
-
-// gh prints the zero time for a step not started.
-func zeroTime(s string) string {
-	if strings.HasPrefix(s, "0001-01-01") {
-		return ""
-	}
-	return s
-}
-
 // Actions answers for one machine. Zero values work: gh and git on PATH.
 type Actions struct {
 	Runner Runner
@@ -280,7 +230,7 @@ type Actions struct {
 	ghAt  time.Time
 	ghBin string
 	auth  map[string]cached[bool]
-	lists map[string]cached[[]Run]
+	lists map[string]*runsEntry
 	sem   chan struct{}
 	// The boards, kept boardTTL, and the one being read for each.
 	boards map[boardKey]*boardEntry
@@ -301,7 +251,6 @@ type cached[T any] struct {
 }
 
 const (
-	listTTL = 5 * time.Second
 	authTTL = time.Minute
 	ghTTL   = 5 * time.Minute
 )
@@ -546,48 +495,88 @@ func (a *Actions) gho(ctx context.Context, w Where, max int, args ...string) ([]
 	return a.runner().Run(ctx, w.Root, w.gh, max, args...)
 }
 
+// runsEntry is one repository and branch's runs, read with `gh api -i`
+// and kept BoardsTTL; etag makes the next read a 304 when nothing changed.
+type runsEntry struct {
+	runs    []Run
+	etag    string
+	at      time.Time
+	err     error
+	reading chan struct{} // closed when the read in flight is done
+}
+
 // Runs lists the repository's latest runs, of one branch when branch is
-// not "". Answers are kept five seconds.
+// not "". One read per repository and branch per BoardsTTL however many
+// panes ask, as a conditional request (a 304 costs no quota), and none
+// while the host is backing off a rate limit.
 func (a *Actions) Runs(ctx context.Context, w Where, branch string, limit int) ([]Run, error) {
 	if limit <= 0 {
 		limit = DefaultRuns
 	}
 	limit = min(limit, MaxRuns)
-	key := fmt.Sprintf("%s|%s|%d", w.Repo.Arg(), branch, limit)
-	a.mu.Lock()
-	if c, ok := a.lists[key]; ok && time.Since(c.at) < listTTL {
-		a.mu.Unlock()
-		return c.v, nil
-	}
-	a.mu.Unlock()
-	args := []string{"run", "list", "-R", w.Repo.Arg(), "-L", fmt.Sprint(limit), "--json", runFields}
-	if branch != "" {
-		args = append(args, "-b", branch)
-	}
-	out, err := a.gho(ctx, w, MaxOutput, args...)
-	if err != nil {
-		return nil, err
-	}
-	var raw []ghRun
-	if err := json.Unmarshal(out, &raw); err != nil {
-		return nil, fmt.Errorf("gh printed something else: %w", err)
-	}
-	runs := make([]Run, 0, len(raw))
-	for _, g := range raw {
-		runs = append(runs, g.run())
-	}
-	a.mu.Lock()
-	if a.lists == nil {
-		a.lists = map[string]cached[[]Run]{}
-	}
-	for k, c := range a.lists {
-		if time.Since(c.at) > listTTL {
-			delete(a.lists, k)
+	key := w.Repo.Arg() + "|" + branch
+	for {
+		a.mu.Lock()
+		if a.lists == nil {
+			a.lists = map[string]*runsEntry{}
 		}
+		e := a.lists[key]
+		if e == nil {
+			e = &runsEntry{}
+			a.lists[key] = e
+		}
+		if ch := e.reading; ch != nil {
+			a.mu.Unlock()
+			select {
+			case <-ch:
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		b := a.limited[w.Repo.Host]
+		limited := b != nil && time.Now().Before(b.until)
+		if limited && e.at.IsZero() {
+			a.mu.Unlock()
+			return nil, fmt.Errorf("API rate limit exceeded until %s", b.until.Local().Format("15:04"))
+		}
+		if limited || !e.at.IsZero() && time.Since(e.at) < BoardsTTL {
+			runs, err := e.runs, e.err
+			a.mu.Unlock()
+			return runs[:min(limit, len(runs))], err
+		}
+		e.reading = make(chan struct{})
+		etag := e.etag
+		for k, o := range a.lists {
+			if o.reading == nil && time.Since(o.at) > 10*BoardsTTL {
+				delete(a.lists, k)
+			}
+		}
+		a.mu.Unlock()
+		// The read is shared: one asker going away does not cancel it.
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
+		bw := w
+		bw.Branch = branch
+		res := a.fetchRuns(rctx, bw, "", MaxRuns, etag)
+		cancel()
+		a.mu.Lock()
+		switch {
+		case res.limited:
+			a.backOff(w.Repo.Host, res.retryAfter, res.until)
+			if e.at.IsZero() {
+				e.err = fmt.Errorf("API rate limit exceeded")
+			}
+		case res.err != nil:
+			e.err, e.at = res.err, time.Now()
+		case res.notModified:
+			e.err, e.at = nil, time.Now()
+		default:
+			e.runs, e.etag, e.err, e.at = res.runs, res.etag, nil, time.Now()
+		}
+		close(e.reading)
+		e.reading = nil
+		a.mu.Unlock()
 	}
-	a.lists[key] = cached[[]Run]{v: runs, at: time.Now()}
-	a.mu.Unlock()
-	return runs, nil
 }
 
 // Forget drops the kept lists, after a rerun or cancel changed them.

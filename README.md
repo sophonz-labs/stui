@@ -106,7 +106,7 @@ stui --help
 | `ctrl-d` | sessions, windows, orch | kill or stop (asks first) |
 | `r` `d` | orch | read a worker's answer, its diff |
 | `:` | everywhere | a view, `:ext`, `:config`, or any stui command: `:worker list`, `:orch history` |
-| `ctrl-r` | everywhere | refresh now, and read config.yaml again (it refreshes every 2 seconds, CI every fifth time) |
+| `ctrl-r` | everywhere | refresh now, and read config.yaml again (it refreshes every 2 seconds, CI once a minute) |
 | `ctrl-e` | everywhere | the header on and off |
 | `y` | lists | copy the row's value: a session's name, `session:index` for a window, a pane's id, a run's name, a CI run's URL, a plugin row's `url` (else its id) |
 | `Y` | lists | copy the whole row, tab-separated |
@@ -166,7 +166,7 @@ They are plain files under `~/.stui/vault/<session>/<window>/`, and nothing is s
 
 ## CI
 
-For every pane, stui finds the git checkout it is in, the GitHub repository of its remote and the branch checked out, and asks `gh run list` for its runs (each repository at most every 5 seconds). The CI column and the CI view show each workflow's latest run on that branch: `● running`, `✓ passed`, `✗ failed`. `o` opens the run that matters most (a failed one, else a running one) with `open` on macOS or `xdg-open` on Linux.
+For every pane, stui finds the git checkout it is in, the GitHub repository of its remote and the branch checked out, and reads its runs through `gh api` (each repository at most every 30 seconds, as a conditional request that costs no quota when nothing changed; the lists ask once a minute, every 10 seconds while the CI view is in front). The CI column and the CI view show each workflow's latest run on that branch: `● running`, `✓ passed`, `✗ failed`. `o` opens the run that matters most (a failed one, else a running one) with `open` on macOS or `xdg-open` on Linux.
 
 stui never sees a GitHub token: `gh` holds it. Run `gh auth login` once. From the command line:
 
@@ -241,7 +241,7 @@ stui config path
 | `ui.logo` | `true` | the logo at the header's top right; `:logo` turns it off for now |
 | `ui.headless` | `false` | no header at all; `ctrl-e` or `:headless` toggles it for now |
 | `ui.color` | `true` | `false` draws without colour, as `NO_COLOR` (which always wins) |
-| `refreshRate` | `2s` | how often stui reads its server again, `500ms` or more; CI every fifth time |
+| `refreshRate` | `2s` | how often stui reads its server again, `500ms` or more; CI once a minute |
 | `startView` | `sessions` | the view it opens on: `sessions`, `agents`, `orch`, `ci`, `usage`, `top` or `docs` (`stui ui <view>` still wins) |
 | `ui.workspace` | `false` | attaching keeps stui around the session (`stui --workspace`) |
 | `plugins.enabled` | `true` | `false` loads no plugins |
