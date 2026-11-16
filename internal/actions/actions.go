@@ -230,8 +230,10 @@ type Actions struct {
 	ghAt  time.Time
 	ghBin string
 	auth  map[string]cached[bool]
-	lists map[string]*runsEntry
-	sem   chan struct{}
+	// The `gh auth status` in flight per host, shared by every asker.
+	authing map[string]chan struct{}
+	lists   map[string]*runsEntry
+	sem     chan struct{}
 	// The boards, kept boardTTL, and the one being read for each.
 	boards map[boardKey]*boardEntry
 	// The coordinator's board (boards.go): each group's runs, kept
@@ -453,11 +455,38 @@ func remoteRank(n string) int {
 // GitLab remote) is not signed in either; the caller tells them apart.
 func (a *Actions) authed(ctx context.Context, gh, host string) (bool, string) {
 	a.mu.Lock()
-	if c, ok := a.auth[host]; ok && time.Since(c.at) < authTTL {
+	for {
+		if c, ok := a.auth[host]; ok && time.Since(c.at) < authTTL {
+			a.mu.Unlock()
+			return c.v, ""
+		}
+		ch := a.authing[host]
+		if ch == nil {
+			break
+		}
 		a.mu.Unlock()
-		return c.v, ""
+		select {
+		case <-ch:
+		case <-ctx.Done():
+			return false, ctx.Err().Error()
+		}
+		a.mu.Lock()
+		if _, ok := a.auth[host]; !ok {
+			break // that one failed without a verdict: ask again
+		}
 	}
+	if a.authing == nil {
+		a.authing = map[string]chan struct{}{}
+	}
+	ch := make(chan struct{})
+	a.authing[host] = ch
 	a.mu.Unlock()
+	defer func() {
+		a.mu.Lock()
+		delete(a.authing, host)
+		close(ch)
+		a.mu.Unlock()
+	}()
 	_, err := a.runner().Run(ctx, "", gh, 64<<10, "auth", "status", "--hostname", host)
 	ok := err == nil
 	detail := ""

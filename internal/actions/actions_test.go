@@ -69,6 +69,8 @@ type fake struct {
 	// is in no checkout.
 	gitAt map[string]map[string]string
 	gh    map[string]fakeOut
+	// How long `gh auth status` takes, as the real one's request does.
+	authDelay time.Duration
 }
 
 type fakeOut struct {
@@ -78,6 +80,9 @@ type fakeOut struct {
 }
 
 func (f *fake) Run(ctx context.Context, dir, bin string, max int, args ...string) ([]byte, error) {
+	if len(args) > 1 && args[0] == "auth" {
+		time.Sleep(f.authDelay)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	key := strings.Join(args, " ")
@@ -204,7 +209,7 @@ func TestRunsShared(t *testing.T) {
 		"auth status":                           {},
 		runsPath:                                {out: runList},
 		runsPath + " -H If-None-Match: W/\"a\"": {out: "HTTP/2.0 304 Not Modified\r\n\r\n", code: 1, err: "gh: HTTP 304"},
-	}}
+	}, authDelay: 50 * time.Millisecond}
 	a := &Actions{Runner: f, Gh: "gh"}
 	s := NewService(ServiceOptions{PaneCwd: func(ctx context.Context, pane string) (string, bool) { return "/src/app", true }, Actions: a})
 	ask := func() {
@@ -236,6 +241,9 @@ func TestRunsShared(t *testing.T) {
 	}
 	if n := f.count("gh " + runsPath + " -H If-None-Match"); n != 1 {
 		t.Errorf("conditional reads: %d", n)
+	}
+	if n := f.count("gh auth status"); n != 1 {
+		t.Errorf("auth asked %d times by panes asking at once", n)
 	}
 }
 
