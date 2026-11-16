@@ -111,9 +111,12 @@ var hostname = func() string {
 
 // stuiIcon is an agent kind's icon from the command icons (internal/cmdicon).
 func stuiIcon(agent string) (string, []byte, string) {
-	m := cmdicon.Resolve(agent, "", nil)
-	svg, _ := cmdicon.SVG(m.Icon)
-	return m.Icon, svg, cmdicon.Color(agent)
+	icon := cmdicon.Resolve(agent, "", nil).Icon
+	if icon == "" {
+		icon = agent // the frame's own icons (generic-shell…) are slugs already
+	}
+	svg, _ := cmdicon.SVG(icon)
+	return icon, svg, cmdicon.Color(agent)
 }
 
 // Attach is a client of stui's server on session, at a window when more

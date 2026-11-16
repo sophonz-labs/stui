@@ -73,3 +73,15 @@ func TestWorkspaceDocs(t *testing.T) {
 		t.Error("left the vault")
 	}
 }
+
+// The panel's tab icons are st's UI slugs: they are drawn, not lettered.
+func TestTabIcons(t *testing.T) {
+	for _, slug := range []string{"generic-shell", "generic-monitor", "generic-test", "generic-vcs", "generic-agent", "generic-decision", "generic-docs"} {
+		if key, svg, _ := stuiIcon(slug); key != slug || len(svg) == 0 {
+			t.Errorf("%s: %q, %d bytes", slug, key, len(svg))
+		}
+	}
+	if key, _, _ := stuiIcon("claude"); key != "claude" {
+		t.Errorf("claude: %q", key)
+	}
+}
