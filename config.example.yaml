@@ -6,10 +6,11 @@ ui:
   logo: true          # the logo at the header's top right
   headless: false     # no header at all (ctrl-e toggles it)
   color: true         # false: no colour, as NO_COLOR (which always wins)
+  workspace: false    # attaching keeps stui around the session (stui --workspace)
 
 refreshRate: 2s       # how often stui reads its server again (CI every fifth time); 500ms or more
 
-startView: sessions   # the view it opens on: sessions, agents, orch, ci or usage
+startView: sessions   # the view it opens on: sessions, agents, orch, ci, usage, top or docs
 
 plugins:
   enabled: true       # false: load no plugins (stui ext)

@@ -16,7 +16,7 @@ import "strings"
 var ownHelp = map[string]string{
 	"gate": gateHelp, "task": taskHelp, "ci": ciHelp,
 	"orch": orchHelp, "worker": orchHelp, "skills": skillsHelp, "plugin": pluginHelp, "ext": extHelp, "config": configHelp,
-	"hooks": hooksHelp, "usage": usageHelp, "goal": goalHelp,
+	"hooks": hooksHelp, "usage": usageHelp, "goal": goalHelp, "doc": docHelp,
 }
 
 const pluginHelp = `stui plugin -- the orchestration skills, in the coding agents
@@ -41,8 +41,8 @@ const configHelp = `stui config -- the UI's settings, k9s style
 
 The file is ~/.config/stui/config.yaml (or under $XDG_CONFIG_HOME). A missing
 file is the defaults; an unknown key or a bad value is a warning in the UI and
-the default. Keys: ui.logo, ui.headless, ui.color, refreshRate, startView,
-plugins.enabled, plugins.disabled. Inside the UI, :config shows them, ctrl-e
+the default. Keys: ui.logo, ui.headless, ui.color, ui.workspace, refreshRate,
+startView, plugins.enabled, plugins.disabled, st.read. Inside the UI, :config shows them, ctrl-e
 toggles the header, and a saved file (or ctrl-r) is read again.
 `
 

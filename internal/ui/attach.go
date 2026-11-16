@@ -149,6 +149,9 @@ func locate() where {
 // attachTo puts this terminal on target (in session; label is how to say
 // it) and comes back to stui ui when it detaches.
 func (a *app) attachTo(session, target, label string) {
+	if a.workspace && a.runWorkspace(session) {
+		return
+	}
 	prefix := "C-b"
 	if out, err := exec.Command("tmux", "show-options", "-gv", "prefix").Output(); err == nil && strings.TrimSpace(string(out)) != "" {
 		prefix = strings.TrimSpace(string(out))

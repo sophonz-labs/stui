@@ -20,6 +20,7 @@ type entry struct {
 	Label    string   `json:"label"`
 	Match    []string `json:"match"`
 	Category string   `json:"category"`
+	Color    string   `json:"color"`
 }
 
 type registry struct {
@@ -48,6 +49,15 @@ func init() {
 			byName[m] = &reg.Commands[i]
 		}
 	}
+}
+
+// Color is the brand colour (#rrggbb) of the program named name (an agent
+// kind or a command), or "" when the registry has none.
+func Color(name string) string {
+	if e := byName[name]; e != nil {
+		return e.Color
+	}
+	return ""
 }
 
 // Version is the registry's iconsVersion.

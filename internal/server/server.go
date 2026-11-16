@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/sophonz-labs/stui/internal/metrics"
 	"io"
 	"net"
 	"net/http"
@@ -60,6 +61,7 @@ type server struct {
 	orch     Routes
 	usage    *usage.Service
 	actions  *ghactions.Service
+	metrics  *metrics.Buffer
 	hooks    *hookCache
 	token    string
 	muxVer   string
@@ -183,10 +185,13 @@ func Run(argv []string) int {
 		return ghactions.Opened{Session: session, Window: index, Name: o.Name}, nil
 	}
 
+	mb := newMetrics(m)
+	go mb.Run(ctx)
+
 	var tb [16]byte
 	rand.Read(tb[:])
 	s := &server{m: m, tm: tm, muxVer: mux.Version(context.Background(), m), watcher: watcher, chat: chatService, orch: ad, usage: usageService,
-		actions: ghactions.NewService(actionOpts), hooks: hookState, token: hex.EncodeToString(tb[:]), shutdown: stop}
+		actions: ghactions.NewService(actionOpts), metrics: mb, hooks: hookState, token: hex.EncodeToString(tb[:]), shutdown: stop}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -254,7 +259,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/api/version":
 		writeJSON(w, 200, map[string]any{"version": Version, "mux": "tmux", "muxVersion": s.muxVer, "muxSocket": s.m.ServerSocket(ctx),
 			"os":    runtime.GOOS + "/" + runtime.GOARCH,
-			"hooks": s.hooks.States(), "hookSets": s.hooks.Sets(), "agentWatch": 1, "adopt": 1, "chat": 1, "usage": 1, "actions": 1})
+			"hooks": s.hooks.States(), "hookSets": s.hooks.Sets(), "agentWatch": 1, "adopt": 1, "chat": 1, "usage": 1, "actions": 1, "metrics": 1})
 		return
 	case path == "/api/stop" && r.Method == "POST":
 		writeJSON(w, 200, map[string]any{"ok": true})
@@ -269,6 +274,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case (path == "/api/usage" || path == "/api/usage/guard") && s.usage.ServeHTTP(w, r):
 		return
 	case strings.HasPrefix(path, "/api/actions") && s.actions.ServeHTTP(w, r):
+		return
+	case strings.HasPrefix(path, "/api/metrics") && s.metrics.ServeHTTP(w, r):
 		return
 	}
 	q := r.URL.Query()

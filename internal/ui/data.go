@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"github.com/sophonz-labs/stui/internal/vault"
+
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -240,6 +242,9 @@ type version struct {
 	Mux        string `json:"mux"`
 	MuxVersion string `json:"muxVersion"`
 	OS         string `json:"os"`
+	// MuxSocket is the tmux server stui watches (the workspace finds its own
+	// client there).
+	MuxSocket string `json:"muxSocket"`
 }
 
 // snap is everything the screens show, read at one time.
@@ -251,6 +256,8 @@ type snap struct {
 	panes    map[string][]pane   // by session
 	agents   agents
 	usage    usage
+	metrics  metrics
+	docs     []vault.Doc        // what stui doc kept here, read from disk
 	ci       map[string]*ciInfo // by pane id
 	st       *client            // st's server, when it runs here and stui reads it (st.go)
 	err      error
@@ -273,6 +280,8 @@ func (c *client) fetch(prev *snap, withCI, withST bool) *snap {
 	run(func() { c.get("/api/version", &s.version) })
 	run(func() { c.get("/api/agents", &s.agents) })
 	run(func() { c.get("/api/usage", &s.usage) })
+	run(func() { c.get("/api/metrics", &s.metrics) })
+	run(func() { s.docs, _ = vault.List() })
 	var stAgents []agentPane
 	if withST {
 		run(func() { s.st, stAgents = readST() })

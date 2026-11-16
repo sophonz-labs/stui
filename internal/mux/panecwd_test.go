@@ -32,8 +32,17 @@ func TestPaneCwd(t *testing.T) {
 		t.Fatal("new-session")
 	}
 	id, _ := tm.ask(ctx, "cwd:", "#{pane_id}")
-	got, ok := tm.PaneCwd(ctx, id)
 	want, _ := filepath.EvalSymlinks(work)
+	// The pane's shell changes into work just after tmux forks it; until
+	// then Linux reports the server's folder.
+	var got string
+	var ok bool
+	for end := time.Now().Add(3 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+		got, ok = tm.PaneCwd(ctx, id)
+		if real, _ := filepath.EvalSymlinks(got); (ok && real == want) || time.Now().After(end) {
+			break
+		}
+	}
 	if real, _ := filepath.EvalSymlinks(got); !ok || real != want {
 		t.Fatalf("cwd of %s: %q %v, want %q", id, got, ok, want)
 	}
