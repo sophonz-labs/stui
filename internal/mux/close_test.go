@@ -117,7 +117,9 @@ func TestTmuxCloseWindow(t *testing.T) {
 				running = append(running, p.Window+" "+p.Command)
 			}
 		}
-		if len(running) > 0 {
+		// Until it has settled: right after the fork the new pane's process
+		// is still tmux, before the exec makes it sleep.
+		if len(running) == 1 && running[0] == wins[1].ID+" sleep" {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
