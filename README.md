@@ -136,11 +136,11 @@ Attaching to a pane selects its window and the pane first.
 
 ## Workspace
 
-`stui --workspace` (or `ui.workspace: true` in config.yaml) keeps stui on screen when you attach. The session runs in the middle as its own tmux client of stui's server (`$TMUX` is cleared, so this works inside tmux too). Windows always attaches as above.
+Attaching keeps stui on screen around the session. `stui --no-workspace` (or `ui.workspace: false` in config.yaml) attaches as above instead. The session runs in the middle as its own tmux client of stui's server (`$TMUX` is cleared, so this works inside tmux too). Windows always attaches as above.
 
 - **Sidebar**: this machine's sessions and windows, with each agent's state colour and icon, and the orchestration tree under the windows (workers, teams, running subagents). Click a window to go to it. Drag the edge to resize it.
 - **Menu bar**: `stui ▾  Session  Window  Pane  Agents  View  Help`. Each item shows its key.
-- **Right panel** (`p`): seven icon tabs, the picked one's name under them: Terminal (the window in front, its agent and run), AI Usage (each agent's limits), CI (the latest run per workflow for the pane in front), Git (not served by stui yet), Agents (the run as cards), History (who sent what to whom), Docs (what `stui doc` kept, by session and window, rendered as markdown).
+- **Right panel** (`prefix p`, or click `[>]` at the right end of the menu bar; while it is closed the bottom line says `ctrl-] p panel`): seven icon tabs, the picked one's name under them: Terminal (the window in front, its agent and run), AI Usage (each agent's limits), CI (the latest run per workflow for the pane in front), Git (not served by stui yet), Agents (the run as cards), History (who sent what to whom), Docs (what `stui doc` kept, by session and window, rendered as markdown).
 - **Mouse**: clicks and the wheel reach the program inside when it asked for the mouse. Right-click a pane or a sidebar window for its menu (split, zoom, close, rename, adopt, release).
 - **Keys**: the prefix is `ctrl-]`, then `m` menu bar, `tab` sidebar, `p` panel, `1`–`7` panel tabs, `n` `c` `,` `&` `%` `"` `z` `x` as in tmux, `o` adopt, `R` release, `s` sidebar, `:` command, `l` back to the list, `?` every key. The prefix twice sends one prefix inside. `STUI_PREFIX` (`C-a`, `ctrl-a`, `^a`) changes it.
 - **Bottom row**: the agents' limits and memory, or the last message for five seconds.
@@ -243,7 +243,7 @@ stui config path
 | `ui.color` | `true` | `false` draws without colour, as `NO_COLOR` (which always wins) |
 | `refreshRate` | `2s` | how often stui reads its server again, `500ms` or more; CI once a minute |
 | `startView` | `sessions` | the view it opens on: `sessions`, `agents`, `orch`, `ci`, `usage`, `top` or `docs` (`stui ui <view>` still wins) |
-| `ui.workspace` | `false` | attaching keeps stui around the session (`stui --workspace`) |
+| `ui.workspace` | `true` | attaching keeps stui around the session (`false`, or `stui --no-workspace`: tmux takes the terminal) |
 | `plugins.enabled` | `true` | `false` loads no plugins |
 | `plugins.disabled` | `[]` | plugins to leave out, by name |
 | `st.read` | `true` | when st runs on this machine, show its runs and agents too, read-only |

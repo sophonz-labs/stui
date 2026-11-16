@@ -67,7 +67,7 @@ type app struct {
 	exe    string // this stui, to run its commands
 	snap   *snap
 	// workspace: attaching keeps stui on screen around the session
-	// (--workspace, ui.workspace; workspace.go).
+	// (ui.workspace, true by default; not with --no-workspace; workspace.go).
 	workspace bool
 	icons     *workspace.Icons // agent icons, list and workspace
 	stack     []*page
@@ -122,7 +122,8 @@ func Run(s *state.Agent, version string, args []string) int {
 		start = a.cfg.StartView
 	}
 	a.stack = []*page{{v: rootView(start)}}
-	a.workspace = a.cfg.Flags["ui.workspace"] || slices.Contains(args, "--workspace")
+	// The workspace is the default; --workspace is still taken.
+	a.workspace = a.cfg.Flags["ui.workspace"] && !slices.Contains(args, "--no-workspace")
 	scr, err := openScreen()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "stui ui:", err)
