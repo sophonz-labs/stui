@@ -42,6 +42,21 @@ func TestNewPanesOpenHere(t *testing.T) {
 		out, _ := tm.sh(ctx, "list-panes", "-s", "-t", "here", "-F", "#{pane_current_path}")
 		return strings.Fields(out)
 	}
+	// A new pane's process changes into its folder just after tmux forks
+	// it; read before that, Linux gives the server's folder. Wait for it.
+	settled := func() []string {
+		for end := time.Now().Add(3 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+			got := paths()
+			all := true
+			for _, p := range got {
+				all = all && p == work
+			}
+			if all || time.Now().After(end) {
+				return got
+			}
+		}
+	}
+	settled()
 	for _, a := range []Action{SplitRight, SplitDown, NewWindow} {
 		tm.sh(ctx, "select-window", "-t", "here:0")
 		tm.sh(ctx, "select-pane", "-t", "here:0.0")
@@ -49,7 +64,7 @@ func TestNewPanesOpenHere(t *testing.T) {
 		if err := tm.Run(ctx, "here", a, "", ""); err != nil {
 			t.Fatalf("%v: %v", a, err)
 		}
-		got := paths()
+		got := settled()
 		if len(got) != before+1 {
 			t.Fatalf("%v: %d panes, want %d", a, len(got), before+1)
 		}
