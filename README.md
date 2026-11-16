@@ -140,9 +140,9 @@ Attaching to a pane selects its window and the pane first.
 
 - **Sidebar**: this machine's sessions and windows, with each agent's state colour and icon, and the orchestration tree under the windows (workers, teams, running subagents). Click a window to go to it. Drag the edge to resize it.
 - **Menu bar**: `stui ▾  Session  Window  Pane  Agents  View  Help`. Each item shows its key.
-- **Right panel** (`p`): Agents (the run as cards), History (who sent what to whom), Docs (what `stui doc` kept, by session and window, rendered as markdown).
+- **Right panel** (`p`): seven icon tabs, the picked one's name under them: Terminal (the window in front, its agent and run), AI Usage (each agent's limits), CI (the latest run per workflow for the pane in front), Git (not served by stui yet), Agents (the run as cards), History (who sent what to whom), Docs (what `stui doc` kept, by session and window, rendered as markdown).
 - **Mouse**: clicks and the wheel reach the program inside when it asked for the mouse. Right-click a pane or a sidebar window for its menu (split, zoom, close, rename, adopt, release).
-- **Keys**: the prefix is `ctrl-]`, then `m` menu bar, `tab` sidebar, `p` panel, `1` `2` `3` panel tabs, `n` `c` `,` `&` `%` `"` `z` `x` as in tmux, `o` adopt, `R` release, `s` sidebar, `:` command, `l` back to the list, `?` every key. The prefix twice sends one prefix inside. `STUI_PREFIX` (`C-a`, `ctrl-a`, `^a`) changes it.
+- **Keys**: the prefix is `ctrl-]`, then `m` menu bar, `tab` sidebar, `p` panel, `1`–`7` panel tabs, `n` `c` `,` `&` `%` `"` `z` `x` as in tmux, `o` adopt, `R` release, `s` sidebar, `:` command, `l` back to the list, `?` every key. The prefix twice sends one prefix inside. `STUI_PREFIX` (`C-a`, `ctrl-a`, `^a`) changes it.
 - **Bottom row**: the agents' limits and memory, or the last message for five seconds.
 
 When the session ends (`prefix d`, the session closes), stui is back on its list. Folds, the panel and its width are kept in `~/.stui/ui.json`.
