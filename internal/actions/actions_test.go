@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -68,6 +69,8 @@ type fake struct {
 	// is in no checkout.
 	gitAt map[string]map[string]string
 	gh    map[string]fakeOut
+	// How long `gh auth status` takes, as the real one's request does.
+	authDelay time.Duration
 }
 
 type fakeOut struct {
@@ -77,6 +80,9 @@ type fakeOut struct {
 }
 
 func (f *fake) Run(ctx context.Context, dir, bin string, max int, args ...string) ([]byte, error) {
+	if len(args) > 1 && args[0] == "auth" {
+		time.Sleep(f.authDelay)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	key := strings.Join(args, " ")
@@ -132,7 +138,10 @@ func checkout() map[string]string {
 	}
 }
 
-const runList = `[{"databaseId":42,"number":7,"attempt":1,"workflowName":"CI","displayTitle":"Fix login","headBranch":"feature/x","headSha":"c75f7fafb374ef42","event":"push","status":"in_progress","conclusion":"","createdAt":"2026-10-14T19:54:00Z","startedAt":"2026-10-14T19:54:05Z","updatedAt":"2026-10-14T19:55:00Z","url":"https://github.com/me/app/actions/runs/42"}]`
+// GET .../actions/runs, as `gh api -i` prints it.
+const runList = "HTTP/2.0 200 OK\r\nEtag: W/\"a\"\r\n\r\n" + `{"total_count":1,"workflow_runs":[{"id":42,"run_number":7,"run_attempt":1,"name":"CI","path":".github/workflows/ci.yml","display_title":"Fix login","head_branch":"feature/x","head_sha":"c75f7fafb374ef42","event":"push","status":"in_progress","conclusion":null,"created_at":"2026-10-14T19:54:00Z","run_started_at":"2026-10-14T19:54:05Z","updated_at":"2026-10-14T19:55:00Z","html_url":"https://github.com/me/app/actions/runs/42"}]}`
+
+const runsPath = "api --hostname github.com -i -X GET repos/me/app/actions/runs -F per_page=100"
 
 // The REST answers for run 41: the run, and its one job with a step not
 // started.
@@ -164,7 +173,7 @@ func do(t *testing.T, s *Service, method, target, body string) (int, map[string]
 func TestListRuns(t *testing.T) {
 	f := &fake{git: checkout(), gh: map[string]fakeOut{
 		"auth status --hostname github.com": {},
-		"run list -R me/app -L 30":          {out: runList},
+		runsPath:                            {out: runList},
 	}}
 	code, m := serve(t, f, "gh", "GET", "/api/actions?pane=%253", "")
 	if code != 200 || m["state"] != "ok" || m["repo"] != "me/app" || m["branch"] != "feature/x" || m["url"] != "https://github.com/me/app/actions" {
@@ -178,25 +187,70 @@ func TestListRuns(t *testing.T) {
 	if _, ok := r["conclusion"]; ok {
 		t.Error("empty conclusion should be left out")
 	}
-	// Kept five seconds: a second ask runs no gh.
+	// Kept BoardsTTL: a second ask runs no gh.
 	s := NewService(ServiceOptions{
 		PaneCwd: func(ctx context.Context, pane string) (string, bool) { return "/src/app", true },
 		Actions: &Actions{Runner: f, Gh: "gh"},
 	})
 	do(t, s, "GET", "/api/actions?pane=%253", "")
 	do(t, s, "GET", "/api/actions?pane=%253", "")
-	if n := f.count("gh run list"); n != 2 {
-		t.Errorf("gh run list ran %d times, want 2 (one per Actions)", n)
+	if n := f.count("gh " + runsPath); n != 2 {
+		t.Errorf("runs read %d times, want 2 (one per Actions)", n)
 	}
 	if n := f.count("gh auth status"); n != 2 {
 		t.Errorf("auth asked %d times", n)
 	}
 }
 
+// Many panes in one repository, asking as often as the list refreshes for a
+// minute: one read, then one conditional read (a 304, which costs no quota).
+func TestRunsShared(t *testing.T) {
+	f := &fake{git: checkout(), gh: map[string]fakeOut{
+		"auth status":                           {},
+		runsPath:                                {out: runList},
+		runsPath + " -H If-None-Match: W/\"a\"": {out: "HTTP/2.0 304 Not Modified\r\n\r\n", code: 1, err: "gh: HTTP 304"},
+	}, authDelay: 50 * time.Millisecond}
+	a := &Actions{Runner: f, Gh: "gh"}
+	s := NewService(ServiceOptions{PaneCwd: func(ctx context.Context, pane string) (string, bool) { return "/src/app", true }, Actions: a})
+	ask := func() {
+		var wg sync.WaitGroup
+		for p := range 8 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if code, m := do(t, s, "GET", "/api/actions?limit=20&pane=%25"+strconv.Itoa(p), ""); code != 200 || len(m["runs"].([]any)) != 1 {
+					t.Errorf("%d %v", code, m)
+				}
+			}()
+		}
+		wg.Wait()
+	}
+	for range 15 { // 30 s of 2 s refreshes
+		ask()
+	}
+	a.mu.Lock()
+	for _, e := range a.lists {
+		e.at = e.at.Add(-BoardsTTL - time.Second)
+	}
+	a.mu.Unlock()
+	for range 15 {
+		ask()
+	}
+	if n := f.count("gh " + runsPath); n != 2 {
+		t.Errorf("runs read %d times in a minute, want 2:\n%s", n, strings.Join(f.calls, "\n"))
+	}
+	if n := f.count("gh " + runsPath + " -H If-None-Match"); n != 1 {
+		t.Errorf("conditional reads: %d", n)
+	}
+	if n := f.count("gh auth status"); n != 1 {
+		t.Errorf("auth asked %d times by panes asking at once", n)
+	}
+}
+
 func TestBranchFilter(t *testing.T) {
 	f := &fake{git: checkout(), gh: map[string]fakeOut{
-		"auth status": {},
-		"run list -R me/app -L 5 --json " + runFields + " -b main": {out: "[]"},
+		"auth status":                {},
+		runsPath + " -f branch=main": {out: "HTTP/2.0 200 OK\r\n\r\n{\"workflow_runs\":[]}"},
 	}}
 	code, m := serve(t, f, "gh", "GET", "/api/actions?pane=%253&branch=main&limit=5", "")
 	if code != 200 || len(m["runs"].([]any)) != 0 {

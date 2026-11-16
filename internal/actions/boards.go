@@ -613,12 +613,17 @@ type groupRead struct {
 // count). gh exits 1 on a 304, so its status line is
 // read here, not its exit code.
 func (a *Actions) fetchGroup(ctx context.Context, w Where, h Head, etag string) groupRead {
+	return a.fetchRuns(ctx, w, h.Sha, BoardRuns, etag)
+}
+
+// fetchRuns is fetchGroup's read: w's branch's runs, else sha's, else all.
+func (a *Actions) fetchRuns(ctx context.Context, w Where, sha string, perPage int, etag string) groupRead {
 	args := []string{"api", "--hostname", w.Repo.Host, "-i", "-X", "GET", fmt.Sprintf("repos/%s/actions/runs", w.Repo.Slug()),
-		"-F", fmt.Sprintf("per_page=%d", BoardRuns)}
+		"-F", fmt.Sprintf("per_page=%d", perPage)}
 	if w.Branch != "" {
 		args = append(args, "-f", "branch="+w.Branch)
-	} else if h.Sha != "" {
-		args = append(args, "-f", "head_sha="+h.Sha)
+	} else if sha != "" {
+		args = append(args, "-f", "head_sha="+sha)
 	}
 	if etag != "" {
 		args = append(args, "-H", "If-None-Match: "+etag)

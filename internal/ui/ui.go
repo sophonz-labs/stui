@@ -90,6 +90,7 @@ type app struct {
 	headless bool         // ui.headless, likewise
 	rate     atomic.Int64 // refreshRate, read by fetchLoop
 	readST   atomic.Bool  // st.read, likewise
+	ciOpen   atomic.Bool  // the CI view is in front, likewise
 	ticks    int
 
 	copied string // the last text y put on the clipboard
@@ -153,12 +154,25 @@ func firstWord(args []string) string {
 
 func (a *app) fetchLoop() {
 	prev := a.snap
-	for n := 1; ; n++ {
+	var ciAt time.Time
+	for {
 		select {
 		case <-a.refresh:
 		case <-time.After(time.Duration(a.rate.Load())):
 		}
-		s := a.c.fetch(prev, n%5 == 1, a.readST.Load()) // CI every 5th time, first after one
+		// CI marks at most once a minute, every 10 s while the CI view is
+		// in front: each pane's runs come from GitHub (the server reads a
+		// repository once per 30 s), and the account's quota is shared with
+		// everything else that uses gh.
+		every := time.Minute
+		if a.ciOpen.Load() {
+			every = 10 * time.Second
+		}
+		withCI := time.Since(ciAt) >= every
+		if withCI {
+			ciAt = time.Now()
+		}
+		s := a.c.fetch(prev, withCI, a.readST.Load())
 		prev = s
 		select {
 		case <-a.snaps: // drop one not drawn yet
@@ -877,6 +891,8 @@ func (a *app) bodyRows() int {
 }
 
 func (a *app) render() []string {
+	_, ci := a.top().v.(ciView)
+	a.ciOpen.Store(ci)
 	if p := a.top(); a.zoom && p.pg != nil {
 		return a.bare(p.pg)
 	}
