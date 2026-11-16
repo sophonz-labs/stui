@@ -24,6 +24,9 @@ type row struct {
 	kids   bool
 	open   bool
 	vars   map[string]string // a plugin view's record, for its actions' placeholders
+	// icon is an agent kind whose icon goes before cell iconCol.
+	icon    string
+	iconCol int
 }
 
 type hint struct{ key, desc string }
@@ -163,7 +166,8 @@ func (sessionsView) rows(a *app) []row {
 		if x.Created > 0 {
 			age = ago(x.Created * 1000)
 		}
-		out = append(out, row{id: x.Name, color: color, cells: []string{name, fmt.Sprint(x.Windows), agents, state, fmt.Sprint(x.Attached), age, x.CurrentWindow}})
+		out = append(out, row{id: x.Name, color: color, cells: []string{name, fmt.Sprint(x.Windows), agents, state, fmt.Sprint(x.Attached), age, x.CurrentWindow},
+			icon: sessionAgent(a.snap, x.Name), iconCol: 2})
 	}
 	return out
 }
@@ -229,10 +233,27 @@ func (v windowsView) rows(a *app) []row {
 		if w.Active {
 			name += " *"
 		}
-		out = append(out, row{id: w.ID, color: color, cells: []string{fmt.Sprint(w.Index), name, fmt.Sprint(w.Panes), w.Command, agent, state, turnAge(top), w.Repo}})
+		out = append(out, row{id: w.ID, color: color, cells: []string{fmt.Sprint(w.Index), name, fmt.Sprint(w.Panes), w.Command, agent, state, turnAge(top), w.Repo},
+			icon: agent, iconCol: 4})
 	}
 	return out
 }
+
+// sessionAgent is the kind of the session's most urgent agent, "" for none.
+func sessionAgent(s *snap, session string) string {
+	var best *agentPane
+	for i := range s.agents.Panes {
+		p := &s.agents.Panes[i]
+		if p.Session == session && (best == nil || urgency(p.State) > urgency(best.State)) {
+			best = p
+		}
+	}
+	if best == nil {
+		return ""
+	}
+	return best.Agent
+}
+
 func urgency(state string) int {
 	return map[string]int{"waiting": 5, "error": 4, "working": 3, "delegated": 2, "idle": 1}[state]
 }
@@ -292,7 +313,8 @@ func (v panesView) rows(a *app) []row {
 		if ag != nil {
 			agent, state, title, color, o = ag.Agent, stateLabel(ag.State), ag.Title, stateColor(ag.State), ag.Orch
 		}
-		out = append(out, row{id: p.ID, color: color, cells: []string{p.ID, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Command, agent, state, turnAge(ag), ciMark(a.snap.ci[p.ID]), orchLabel(o) + stTag(ag), title}})
+		out = append(out, row{id: p.ID, color: color, cells: []string{p.ID, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Command, agent, state, turnAge(ag), ciMark(a.snap.ci[p.ID]), orchLabel(o) + stTag(ag), title},
+			icon: agent, iconCol: 3})
 	}
 	return out
 }
@@ -337,7 +359,8 @@ func (agentsView) rows(a *app) []row {
 		if p.Subagents.Running > 0 {
 			sub = fmt.Sprint(p.Subagents.Running)
 		}
-		out = append(out, row{id: p.ID, color: stateColor(p.State), cells: []string{p.ID, p.Session, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Agent, agentState(p), turnAge(p), sub, ciMark(a.snap.ci[p.ID]), orchLabel(p.Orch) + stTag(p), p.Title}})
+		out = append(out, row{id: p.ID, color: stateColor(p.State), cells: []string{p.ID, p.Session, fmt.Sprintf("%d %s", p.Window, p.WindowName), p.Agent, agentState(p), turnAge(p), sub, ciMark(a.snap.ci[p.ID]), orchLabel(p.Orch) + stTag(p), p.Title},
+			icon: p.Agent, iconCol: 3})
 	}
 	return out
 }
@@ -468,7 +491,8 @@ func (orchView) rows(a *app) []row {
 					color = cGray
 				}
 				out = append(out, row{id: p.ID, parent: parent, kids: len(ch) > 0, open: o, color: color,
-					cells: []string{prefix + branch + mark + name, p.ID, p.Agent, stateLabel(p.State), turnAge(p), fmt.Sprintf("%s:%d", p.Session, p.Window), summary}})
+					cells: []string{prefix + branch + mark + name, p.ID, p.Agent, stateLabel(p.State), turnAge(p), fmt.Sprintf("%s:%d", p.Session, p.Window), summary},
+					icon:  p.Agent, iconCol: 2})
 				if len(ch) > 0 && o {
 					walk(ch, prefix+next, p.ID)
 				}

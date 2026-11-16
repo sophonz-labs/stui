@@ -26,7 +26,10 @@ import (
 const help = `stui — tmux, its coding agents and their CI, in one terminal UI
 
   stui                the UI: sessions, windows, panes, agents, runs, CI
-  stui ui [view]      the same, opening on a view (sessions, agents, orch, ci)
+  stui ui [view]      the same, opening on a view (sessions, agents, orch, ci,
+                      usage, top, docs)
+  stui --workspace    attaching keeps stui around the session: this machine on
+                      the left, agents on the right (ui.workspace in config)
   stui stop           stop the background server (the UI starts it again)
   stui status         whether the server is running, and the agents' hooks
   stui version        print the version
@@ -51,6 +54,8 @@ Coding agents
                       keep this Claude pane working at a goal (stui goal --help)
   stui ci             this checkout's GitHub Actions runs, through gh
                       (stui ci --help)
+  stui doc <file>     keep a markdown file for the workspace's Documents tab,
+                      on this machine only (stui doc --help)
 
 Plugins
   stui ext install <name>
@@ -164,7 +169,11 @@ func Run(v string, argv []string) {
 			fmt.Print(skillHere())
 			return
 		}
-		os.Exit(ui.Run(ensureServer(), version, nil))
+		var args []string
+		if a.has("--workspace") {
+			args = []string{"--workspace"}
+		}
+		os.Exit(ui.Run(ensureServer(), version, args))
 	case "ui":
 		os.Exit(ui.Run(ensureServer(), version, a.after("ui")))
 	case "version":
@@ -195,6 +204,8 @@ func Run(v string, argv []string) {
 		goalCommand(a.after("goal"))
 	case "ci":
 		ciCommand(a)
+	case "doc", "docs":
+		docCommand(a.after(a.command()))
 	case "ext":
 		os.Exit(plugin.Main("stui", ui.Builtins(), a.after("ext"), os.Stdin, os.Stdout))
 	case "config":

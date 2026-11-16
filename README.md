@@ -80,7 +80,9 @@ Without hooks stui still reads the agents' screens, but hooks are what tell work
 
 ```sh
 stui                  # the UI; starts the background server if needed
-stui ui agents        # open on a view: sessions, agents, orch, ci, usage
+stui ui agents        # open on a view: sessions, agents, orch, ci, usage, top, docs
+stui --workspace      # attaching keeps stui around the session (see Workspace)
+stui doc plan.md      # keep a markdown file for the Docs view and the workspace
 stui status           # the server and every agent's hooks
 stui stop             # stop the server
 stui --help
@@ -92,7 +94,7 @@ stui --help
 
 | Key | Where | Does |
 |---|---|---|
-| `1`-`5` | everywhere | sessions, agents, orch, ci, usage |
+| `1`-`7` | everywhere | sessions, agents, orch, ci, usage, top, docs |
 | `j` `k` `↑` `↓`, `g` `G`, `ctrl-b` `ctrl-f` | everywhere | move, top and bottom, a page |
 | `enter` | lists | into the row; in the CI view, open the run |
 | `esc`, `q` | everywhere | back (or clear the filter); `q` quits at the top |
@@ -131,6 +133,36 @@ Before attaching, stui says how to get back, with your real prefix key.
 - Inside tmux older than 3.2 it uses `switch-client`; `prefix L` or `prefix s` returns.
 
 Attaching to a pane selects its window and the pane first.
+
+## Workspace
+
+`stui --workspace` (or `ui.workspace: true` in config.yaml) keeps stui on screen when you attach. The session runs in the middle as its own tmux client of stui's server (`$TMUX` is cleared, so this works inside tmux too). Windows always attaches as above.
+
+- **Sidebar**: this machine's sessions and windows, with each agent's state colour and icon, and the orchestration tree under the windows (workers, teams, running subagents). Click a window to go to it. Drag the edge to resize it.
+- **Menu bar**: `stui ▾  Session  Window  Pane  Agents  View  Help`. Each item shows its key.
+- **Right panel** (`p`): Agents (the run as cards), History (who sent what to whom), Docs (what `stui doc` kept, by session and window, rendered as markdown).
+- **Mouse**: clicks and the wheel reach the program inside when it asked for the mouse. Right-click a pane or a sidebar window for its menu (split, zoom, close, rename, adopt, release).
+- **Keys**: the prefix is `ctrl-]`, then `m` menu bar, `tab` sidebar, `p` panel, `1` `2` `3` panel tabs, `n` `c` `,` `&` `%` `"` `z` `x` as in tmux, `o` adopt, `R` release, `s` sidebar, `:` command, `l` back to the list, `?` every key. The prefix twice sends one prefix inside. `STUI_PREFIX` (`C-a`, `ctrl-a`, `^a`) changes it.
+- **Bottom row**: the agents' limits and memory, or the last message for five seconds.
+
+When the session ends (`prefix d`, the session closes), stui is back on its list. Folds, the panel and its width are kept in `~/.stui/ui.json`.
+
+Agent icons: Ghostty, kitty and WezTerm (outside tmux) get the same pictures as st's web and desktop apps, drawn with kitty graphics. Other terminals get one letter in the agent's colour (`STUI_ICONS=letters` forces that). The list views show them too, in the agent column.
+
+## Top
+
+`6` (or `:top`) is the machine over the last ten minutes, one sample every five seconds: CPU, load, memory, swap, and what stui itself takes (this server, the tmux server and everything running in its panes). The numbers stay on this machine.
+
+## Documents
+
+```sh
+stui doc plan.md      # keep a copy, in the folder of this pane's session and window
+stui doc ls           # path, title, when it changed
+stui doc cat main/build/plan.md
+stui doc rm main/build/plan.md
+```
+
+They are plain files under `~/.stui/vault/<session>/<window>/`, and nothing is sent anywhere. `7` (or `:docs`) lists them newest first and `enter` reads one. The workspace's Docs tab shows the same files.
 
 ## CI
 
@@ -210,7 +242,8 @@ stui config path
 | `ui.headless` | `false` | no header at all; `ctrl-e` or `:headless` toggles it for now |
 | `ui.color` | `true` | `false` draws without colour, as `NO_COLOR` (which always wins) |
 | `refreshRate` | `2s` | how often stui reads its server again, `500ms` or more; CI every fifth time |
-| `startView` | `sessions` | the view it opens on: `sessions`, `agents`, `orch`, `ci` or `usage` (`stui ui <view>` still wins) |
+| `startView` | `sessions` | the view it opens on: `sessions`, `agents`, `orch`, `ci`, `usage`, `top` or `docs` (`stui ui <view>` still wins) |
+| `ui.workspace` | `false` | attaching keeps stui around the session (`stui --workspace`) |
 | `plugins.enabled` | `true` | `false` loads no plugins |
 | `plugins.disabled` | `[]` | plugins to leave out, by name |
 | `st.read` | `true` | when st runs on this machine, show its runs and agents too, read-only |
@@ -219,7 +252,7 @@ stui config path
 
 ## Files
 
-stui keeps its state in `~/.stui` (`STUI_HOME` moves it): the server's address and token, the runs, briefs and inboxes, and the server's log. `stui hooks install` edits the agents' own settings files and keeps a backup next to each.
+stui keeps its state in `~/.stui` (`STUI_HOME` moves it): the server's address and token, the runs, briefs and inboxes, the documents (`vault/`), the workspace's layout (`ui.json`), and the server's log. `stui hooks install` edits the agents' own settings files and keeps a backup next to each.
 
 ## Requirements
 

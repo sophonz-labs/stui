@@ -9,7 +9,7 @@ import (
 )
 
 // startViews are the views config.yaml's startView may name.
-var startViews = []string{"sessions", "agents", "orch", "ci", "usage"}
+var startViews = []string{"sessions", "agents", "orch", "ci", "usage", "top", "docs"}
 
 // StartViews is startViews, for stui config.
 func StartViews() []string { return startViews }
@@ -18,6 +18,9 @@ func StartViews() []string { return startViews }
 var ConfigFlags = []config.Flag{{Key: "st.read", Default: true, Template: `# st:
 #   read: true          # when st runs on this machine, show its runs and agents
 #                       # too, read-only (they are marked st)
+`}, {Key: "ui.workspace", Template: `# ui:
+#   workspace: false    # attaching keeps stui around the session: sessions on
+#                       # the left, agents on the right (stui --workspace)
 `}}
 
 // conf is the settings, the defaults before any were read.

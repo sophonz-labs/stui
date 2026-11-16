@@ -5,6 +5,9 @@
 package ui
 
 import (
+	"github.com/sophonz-labs/tmui/pkg/workspace"
+	"slices"
+
 	"context"
 	"fmt"
 	"net/url"
@@ -63,9 +66,13 @@ type app struct {
 	shared string // the session stui ui runs in, "" outside tmux
 	exe    string // this stui, to run its commands
 	snap   *snap
-	stack  []*page
-	folded map[string]bool
-	w, h   int
+	// workspace: attaching keeps stui on screen around the session
+	// (--workspace, ui.workspace; workspace.go).
+	workspace bool
+	icons     *workspace.Icons // agent icons, list and workspace
+	stack     []*page
+	folded    map[string]bool
+	w, h      int
 
 	mode    mode
 	input   string
@@ -114,6 +121,7 @@ func Run(s *state.Agent, version string, args []string) int {
 		start = a.cfg.StartView
 	}
 	a.stack = []*page{{v: rootView(start)}}
+	a.workspace = a.cfg.Flags["ui.workspace"] || slices.Contains(args, "--workspace")
 	scr, err := openScreen()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "stui ui:", err)
@@ -124,7 +132,11 @@ func Run(s *state.Agent, version string, args []string) int {
 	if n := len(a.cfg.Warnings); n > 0 {
 		a.say(fmt.Sprintf("config.yaml: %s (and %d more; :config)", a.cfg.Warnings[0], n-1), true)
 	}
-	defer scr.close()
+	a.icons = workspace.NewIcons(workspace.KittyGraphics("STUI_ICONS"), stuiIcon)
+	defer func() {
+		scr.w.WriteString(a.icons.Forget())
+		scr.close()
+	}()
 	go a.fetchLoop()
 	a.loop()
 	return 0
@@ -168,7 +180,9 @@ func (a *app) loop() {
 	tick := time.NewTicker(250 * time.Millisecond)
 	defer tick.Stop()
 	for !a.quit {
-		a.scr.draw(a.render())
+		lines := a.render()
+		a.scr.w.WriteString(a.icons.Flush()) // pictures before the rows that show them
+		a.scr.draw(lines)
 		select {
 		case k, ok := <-a.scr.keys:
 			if !ok {
@@ -234,10 +248,12 @@ var viewNames = map[string]func() view{
 	"orch": func() view { return orchView{} }, "tree": func() view { return orchView{} }, "workers": func() view { return orchView{} }, "runs": func() view { return orchView{} }, "or": func() view { return orchView{} },
 	"ci": func() view { return ciView{} }, "actions": func() view { return ciView{} },
 	"usage": func() view { return usageView{} }, "us": func() view { return usageView{} },
+	"top": func() view { return topView{} }, "metrics": func() view { return topView{} },
+	"docs": func() view { return docsView{} }, "vault": func() view { return docsView{} },
 }
 
 // hotkeys are the digits that switch views, as k9s's favourites.
-var hotkeys = []struct{ key, name string }{{"1", "sessions"}, {"2", "agents"}, {"3", "orch"}, {"4", "ci"}, {"5", "usage"}}
+var hotkeys = []struct{ key, name string }{{"1", "sessions"}, {"2", "agents"}, {"3", "orch"}, {"4", "ci"}, {"5", "usage"}, {"6", "top"}, {"7", "docs"}}
 
 func rootView(name string) view {
 	if f, ok := viewNames[name]; ok {
@@ -1069,7 +1085,8 @@ func (a *app) body(h int) []string {
 	p.top = max(0, min(p.top, max(0, len(all)-n)))
 	hdr := p.v.header()
 	ws := widths(hdr, all, inner-2)
-	cellLine := func(cells []string) string {
+	ic := iconCols(all)
+	cellLine := func(color string, cells []string, icon string) string {
 		var b strings.Builder
 		b.WriteString(" ")
 		for i, w := range ws {
@@ -1080,12 +1097,21 @@ func (a *app) body(h int) []string {
 			if i < len(cells) {
 				c = cells[i]
 			}
-			b.WriteString(fit(c, w))
+			switch {
+			case !ic[i] || w < 3:
+				b.WriteString(fit(c, w))
+			case icon != "":
+				// Two columns, a picture or a letter, then the text. The
+				// icon sets its own colour; the row's comes back after it.
+				b.WriteString(a.icons.Cell(icon) + color + fit(c, w-2))
+			default:
+				b.WriteString("  " + fit(c, w-2))
+			}
 		}
 		b.WriteString(" ")
 		return b.String()
 	}
-	rows := []string{cWhite + bold + cellLine(hdr) + reset}
+	rows := []string{cWhite + bold + cellLine("", hdr, "") + reset}
 	if len(all) == 0 {
 		lines := []string{"nothing to show"}
 		if e, ok := p.v.(interface{ empty(*app) []string }); ok && p.filter == "" {
@@ -1100,7 +1126,7 @@ func (a *app) body(h int) []string {
 		if i == p.cursor {
 			color = selected
 		}
-		rows = append(rows, color+cellLine(all[i].cells)+reset)
+		rows = append(rows, color+cellLine(color, all[i].cells, all[i].icon)+reset)
 	}
 	return frame(p.v.title(), p.v.scope(), len(all), rows)
 }

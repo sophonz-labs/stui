@@ -126,14 +126,31 @@ func plain(s string) string { return ansi.ReplaceAllString(s, "") }
 // widths shares avail columns among the columns: each as wide as its
 // widest cell (at most 60), the widest given up first when they don't
 // fit, and the last one taking what is left.
+// iconCols is the columns an icon is drawn in, for any row. Every row
+// leaves those two columns, with an icon or blank, so the text lines up.
+func iconCols(rows []row) map[int]bool {
+	m := map[int]bool{}
+	for _, r := range rows {
+		if r.icon != "" {
+			m[r.iconCol] = true
+		}
+	}
+	return m
+}
+
 func widths(header []string, rows []row, avail int) []int {
 	w := make([]int, len(header))
 	for i, h := range header {
 		w[i] = Cells(h)
 	}
+	ic := iconCols(rows)
 	for _, r := range rows {
 		for i := range min(len(r.cells), len(w)) {
-			w[i] = max(w[i], min(60, Cells(r.cells[i])))
+			n := Cells(r.cells[i])
+			if ic[i] {
+				n += 2 // the icon's two columns
+			}
+			w[i] = max(w[i], min(60, n))
 		}
 	}
 	gap := len(w) - 1

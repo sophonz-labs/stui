@@ -535,6 +535,22 @@ func (t *Tmux) OutsideSocket(ctx context.Context) string {
 	return t.socket(ctx, env)
 }
 
+// ServerPID is the tmux server's process id, 0 when none answers.
+func (t *Tmux) ServerPID(ctx context.Context) int {
+	if t.bin == "" {
+		return 0
+	}
+	out, ok := runEnv(ctx, queryTimeout, os.Environ(), t.bin, "list-sessions", "-F", "#{pid}")
+	if !ok {
+		return 0
+	}
+	if l := lines(out); len(l) > 0 {
+		pid, _ := strconv.Atoi(strings.TrimSpace(l[0]))
+		return pid
+	}
+	return 0
+}
+
 func (t *Tmux) socket(ctx context.Context, env []string) string {
 	if t.bin == "" {
 		return ""
