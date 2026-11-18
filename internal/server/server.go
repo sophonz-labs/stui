@@ -41,6 +41,7 @@ import (
 	"github.com/sophonz-labs/stui/internal/mux"
 	"github.com/sophonz-labs/stui/internal/orch"
 	"github.com/sophonz-labs/stui/internal/state"
+	"github.com/sophonz-labs/stui/internal/stlocal"
 	"github.com/sophonz-labs/stui/internal/usage"
 	aw "github.com/sophonz-labs/stui/internal/watch"
 )
@@ -167,7 +168,10 @@ func Run(argv []string) int {
 	usageEnv.ClaudeFeed = func() bool { return hooks.StatuslineOn(hooks.DefaultEnv()) }
 	usageService := usage.NewService(usage.ServiceOptions{Env: usageEnv})
 	go usageService.Run(ctx, time.Minute)
-	go (&usage.Poller{Env: usageEnv, UserAgent: "stui/" + Version, Logf: func(f string, a ...any) { fmt.Fprintf(os.Stderr, f+"\n", a...) }}).Run(ctx)
+	// With st running here, st asks the providers and stui shows st's numbers
+	// (ui/st.go): one poll, the same figures in both.
+	go (&usage.Poller{Env: usageEnv, UserAgent: "stui/" + Version, Paused: stlocal.Live,
+		Logf: func(f string, a ...any) { fmt.Fprintf(os.Stderr, f+"\n", a...) }}).Run(ctx)
 
 	actionOpts := ghactions.ServiceOptions{PaneCwd: m.PaneCwd}
 	actionOpts.Tree = func(ctx context.Context, pane string) []ghactions.Member {

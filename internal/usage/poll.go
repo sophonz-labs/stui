@@ -309,6 +309,9 @@ type Poller struct {
 	Client    *http.Client
 	// Told what each round did; nil says nothing.
 	Logf func(format string, a ...any)
+	// Paused says another program asks the providers for this machine (st,
+	// when it runs here), so a round is skipped; nil never pauses.
+	Paused func() bool
 }
 
 // errRateLimited carries the provider's Retry-After.
@@ -332,7 +335,7 @@ func (p *Poller) Run(ctx context.Context) {
 			return
 		case <-time.After(wait):
 		}
-		if PollOff(p.Env) {
+		if PollOff(p.Env) || (p.Paused != nil && p.Paused()) {
 			wait = PollEvery
 			continue
 		}

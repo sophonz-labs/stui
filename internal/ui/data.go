@@ -260,6 +260,7 @@ type snap struct {
 	docs     []vault.Doc        // what stui doc kept here, read from disk
 	ci       map[string]*ciInfo // by pane id
 	st       *client            // st's server, when it runs here and stui reads it (st.go)
+	stAcct   *stAccount         // the account st is signed in to, through st (st.go)
 	err      error
 }
 
@@ -270,8 +271,9 @@ const maxCIPanes = 40
 // to read it this time, else it is carried over from prev.
 func (c *client) fetch(prev *snap, withCI, withST bool) *snap {
 	s := &snap{at: time.Now(), windows: map[string][]window{}, panes: map[string][]pane{}, ci: map[string]*ciInfo{}}
+	var prevAcct *stAccount
 	if prev != nil {
-		s.ci = prev.ci
+		s.ci, prevAcct = prev.ci, prev.stAcct
 	}
 	s.err = c.get("/api/sessions", &s.sessions)
 	var wg sync.WaitGroup
@@ -284,7 +286,12 @@ func (c *client) fetch(prev *snap, withCI, withST bool) *snap {
 	run(func() { s.docs, _ = vault.List() })
 	var stAgents []agentPane
 	if withST {
-		run(func() { s.st, stAgents = readST() })
+		run(func() {
+			s.st, stAgents = readST()
+			if s.st != nil {
+				s.stAcct = readSTAccount(s.st, prevAcct)
+			}
+		})
 	}
 	for _, x := range s.sessions {
 		q := "?session=" + url.QueryEscape(x.Name)
@@ -300,6 +307,9 @@ func (c *client) fetch(prev *snap, withCI, withST bool) *snap {
 	}
 	wg.Wait()
 	s.mergeST(stAgents)
+	if s.stAcct != nil && s.stAcct.usage != nil {
+		s.usage = *s.stAcct.usage // one poll of the providers, and the numbers st ui shows
+	}
 	if withCI {
 		s.ci = c.fetchCI(s)
 	}
