@@ -18,7 +18,27 @@ Everything stays on this machine. stui runs a small background server on `127.0.
 
 ## Screenshots
 
-The sessions, with the agents in each and their plan limits at the top:
+The workspace: this machine's sessions on the left, with an orchestration run nested under its coordinator; the session in the middle; the panel's Terminal tab on the right:
+
+![stui workspace](docs/screenshots/workspace.png)
+
+The panel's other tabs: the agents' plan limits, the pane's CI, the run's agents as a graph, what was handed to whom, and the documents kept for the run:
+
+![stui workspace, AI Usage](docs/screenshots/workspace-usage.png)
+
+![stui workspace, CI](docs/screenshots/workspace-ci.png)
+
+![stui workspace, Agents](docs/screenshots/workspace-agents.png)
+
+![stui workspace, History](docs/screenshots/workspace-history.png)
+
+![stui workspace, Docs](docs/screenshots/workspace-docs.png)
+
+With st signed in on the same machine, the account's other machines below this one (see [Without st / with st](#without-st--with-st)):
+
+![stui workspace with other machines](docs/screenshots/workspace-machines.png)
+
+The lists stui opens on, before you attach. The sessions, with the agents in each and their plan limits at the top:
 
 ![stui sessions](docs/screenshots/sessions.png)
 
@@ -38,6 +58,8 @@ An agent's pane, waiting on a permission prompt:
 
 ![stui output of an agent](docs/screenshots/output.png)
 
+The machines, sessions and limits in these pictures are made up.
+
 Text captures of each screen are in [docs/captures](docs/captures).
 
 ## Without st / with st
@@ -51,7 +73,14 @@ When st runs on the same machine, stui shows st's runs and agents too, **read-on
 - When st's server is not running, or does not answer within a second, stui shows only its own.
 - `st.read: false` in config.yaml turns it off. `STUI_ST_HOME` points at another st state directory (default `$SOPHONZ_HOME`, else `~/.sophonz`).
 
-Other machines stay `st ui`'s: stui is this machine only.
+### With st on the same machine
+
+When st is also signed in, the workspace borrows two things from it, through the same local server:
+
+- **Your other machines.** Below this machine, the sidebar lists the account's other machines as `st ui` does: their sessions and windows, and when an offline one was last seen. Picking one runs `st attach <machine>/<session>` (st from `PATH`); this machine's sessions still attach with tmux. stui reads them from st's `GET /api/machines` every 10 seconds.
+- **The plan limits.** The limits come from st's `GET /api/usage`, and stui's own usage poll pauses while st answers, so Anthropic and OpenAI are asked once and both tools show the same numbers.
+
+stui has no login of its own. With st signed out, or without st, it is this machine only, and it offers no sign-in.
 
 ## Install
 
