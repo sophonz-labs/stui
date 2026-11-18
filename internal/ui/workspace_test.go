@@ -21,9 +21,46 @@ func TestWorkspaceAttach(t *testing.T) {
 	if got := strings.Join(h.Attach("main", []string{"--window", "2"}), " "); !strings.HasSuffix(got, "-t =main:2") {
 		t.Errorf("window: %s", got)
 	}
-	// Only this machine: no rows of the host's own.
+	// Without st: this machine only, no rows of the host's own.
 	if h.Rows(nil) != nil {
 		t.Error("rows")
+	}
+	// Another machine's target goes through st.
+	got := h.Attach("m2/work", []string{"--window", "1"})
+	if !strings.HasSuffix(got[0], "st") || strings.Join(got[1:], " ") != "attach m2/work --window 1" {
+		t.Errorf("remote: %q", got)
+	}
+}
+
+func TestOtherMachines(t *testing.T) {
+	ms := []machine{
+		{Slug: "m1", Name: "here", Online: true, Sessions: []remoteSession{{Name: "a"}}},
+		{Slug: "m2", Name: "box", Online: true, Sessions: []remoteSession{{Name: "work", WindowList: []remoteWindow{{Name: "main", Index: 1}}}}},
+		{Slug: "m3", Name: "old", Seen: 1},
+	}
+	var texts, targets []string
+	for _, r := range otherMachines(&stAccount{slug: "m1", machines: ms}, nil) {
+		texts = append(texts, r.Text)
+		targets = append(targets, r.Target+" "+strings.Join(r.More, " "))
+	}
+	want := []string{"OTHER MACHINES", "▾ box", "  work", "    1 main", "  old  offline"}
+	if len(texts) != len(want) {
+		t.Fatalf("rows: %q", texts)
+	}
+	for i, w := range want {
+		if !strings.HasPrefix(texts[i], w) {
+			t.Errorf("row %d: %q, want %q", i, texts[i], w)
+		}
+	}
+	if targets[2] != "m2/work " || targets[3] != "m2/work --window 1" || targets[4] != " " {
+		t.Errorf("targets: %q", targets)
+	}
+	// st signed out (no machines), or no st: nothing.
+	if rows := otherMachines(&stAccount{slug: "m1"}, nil); rows != nil {
+		t.Errorf("signed out: %v", rows)
+	}
+	if rows := otherMachines(nil, nil); rows != nil {
+		t.Errorf("no st: %v", rows)
 	}
 }
 

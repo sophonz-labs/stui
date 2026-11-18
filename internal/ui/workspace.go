@@ -5,11 +5,13 @@ package ui
 // pkg/workspace: a tmux client of stui's server in the middle (its own
 // client, $TMUX cleared), this machine's sessions, windows and agents on
 // the left, the agents graph, history and documents on the right, the menu
-// bar and the mouse. Only this machine: no other machines, no account.
+// bar and the mouse. This machine; and when st runs here signed in, the
+// account's other machines below it, read through st (stui has no login).
 
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -120,8 +122,16 @@ func stuiIcon(agent string) (string, []byte, string) {
 }
 
 // Attach is a client of stui's server on session, at a window when more
-// says --window n.
+// says --window n. Another machine's target (<slug>/<session>, from the
+// rows below) is st attach: st reaches it through the account.
 func (h *wsHost) Attach(target string, more []string) []string {
+	if strings.Contains(target, "/") {
+		st := "st"
+		if p, err := exec.LookPath("st"); err == nil {
+			st = p
+		}
+		return append([]string{st, "attach", target}, more...)
+	}
 	argv := []string{"tmux"}
 	if s := h.a.snap.version.MuxSocket; s != "" {
 		argv = append(argv, "-S", s)
@@ -139,10 +149,67 @@ func (h *wsHost) Do(method, path string, body, out any) error {
 func (h *wsHost) Call(method, path string, body any, done string) {
 	h.a.call(method, path, body, done)
 }
-func (h *wsHost) Say(text string, bad bool) { h.a.say(text, bad) }
-func (h *wsHost) Refresh()                  { h.a.refreshNow() }
-func (h *wsHost) Rows(*workspace.Frame) []workspace.Row {
-	return nil // this machine only
+func (h *wsHost) Say(text string, bad bool)               { h.a.say(text, bad) }
+func (h *wsHost) Refresh()                                { h.a.refreshNow() }
+func (h *wsHost) Rows(f *workspace.Frame) []workspace.Row { return otherMachines(h.a.snap.stAcct, f) }
+
+// otherMachines are the account's machines but this one, each machine ▸
+// session ▸ window, as st ui lists them (its Rows, copied); an offline one
+// is its row and when it was last heard from. Nothing without st or with st
+// signed out: stui does not sign in, so it offers no sign-in row.
+func otherMachines(acct *stAccount, f *workspace.Frame) []workspace.Row {
+	if acct == nil {
+		return nil
+	}
+	var rows []workspace.Row
+	for _, m := range acct.machines {
+		if m.Slug == acct.slug {
+			continue
+		}
+		if rows == nil {
+			rows = append(rows, workspace.Row{Text: "OTHER MACHINES", Color: cGray})
+		}
+		name := m.Name
+		if name == "" {
+			name = m.Slug
+		}
+		if !m.Online {
+			rows = append(rows, workspace.Row{Text: "  " + name + "  offline · " + ago(m.Seen) + " ago", Color: cGray})
+			continue
+		}
+		key := "m:" + m.Slug
+		open := f == nil || !f.Folded(key)
+		rows = append(rows, workspace.Row{Text: fold(open) + name, Color: cWhite, Fold: key, FoldX: 2})
+		if !open {
+			continue
+		}
+		for _, se := range m.Sessions {
+			state, color := "", cAqua
+			if se.Agents != nil {
+				state, color = agentSummary(&agentSession{Working: se.Agents.Working, Waiting: se.Agents.Waiting, Idle: se.Agents.Idle})
+			}
+			text := "  " + se.Name
+			if state != "" {
+				text += "  " + state
+			}
+			target := m.Slug + "/" + se.Name
+			rows = append(rows, workspace.Row{Text: text, Color: color, Target: target})
+			for _, w := range se.WindowList {
+				r := workspace.Row{Text: fmt.Sprintf("    %d %s", w.Index, w.Name), Color: cGray, Target: target, More: []string{"--window", fmt.Sprint(w.Index)}}
+				var best string
+				for _, a := range w.Agents {
+					if best == "" || workspace.StateRank(a.State) > workspace.StateRank(best) {
+						best, r.Icon = a.State, a.Agent
+					}
+				}
+				if r.Icon != "" {
+					r.Lead, r.Text, r.Color = fmt.Sprintf("    %d ", w.Index), w.Name+" "+workspace.StateMark(best), stateColor(best)
+				}
+				rows = append(rows, r)
+			}
+		}
+	}
+	return rows
 }
 
 // Flash is what was said in the last five seconds.

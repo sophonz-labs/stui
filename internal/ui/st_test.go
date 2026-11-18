@@ -15,6 +15,9 @@ import (
 
 const fakeToken = "tok-3f9c-never-shown"
 
+// signedOut makes fakeST's /api/machines say st is not signed in.
+var signedOut atomic.Bool
+
 // st's /api/agents as it answers, trimmed: fields stui does not read
 // (source, phase, about, team…) stay in, as st sends them.
 const stAgentsJSON = `{"v":3,"seq":7,"at":1,"hooks":{},"sessions":[{"name":"work","state":"working","working":1}],
@@ -41,6 +44,17 @@ func fakeST(t *testing.T) (*httptest.Server, *atomic.Int32) {
 		switch r.URL.Path {
 		case "/api/agents":
 			fmt.Fprint(w, stAgentsJSON)
+		case "/api/usage":
+			fmt.Fprint(w, `{"agents":[{"agent":"claude","windows":[{"id":"five_hour","kind":"session","minutes":300,"usedPercent":42}]}]}`)
+		case "/api/version":
+			fmt.Fprint(w, `{"hostname":"box.example"}`)
+		case "/api/machines":
+			if signedOut.Load() {
+				w.WriteHeader(401)
+				fmt.Fprint(w, `{"error":"not signed in"}`)
+				return
+			}
+			fmt.Fprint(w, `[{"slug":"m1","hostname":"box.example","online":true},{"slug":"m2","hostname":"other","online":true}]`)
 		case "/api/panes/history":
 			fmt.Fprint(w, `{"text":"st's pane\n"}`)
 		default:
@@ -199,5 +213,40 @@ func TestEmptyOrchSaysWhereSTIs(t *testing.T) {
 	a.readST.Store(false)
 	if got := plain(strings.Join(a.render(), "\n")); !strings.Contains(got, "st.read: true") {
 		t.Errorf("st.read off:\n%s", got)
+	}
+}
+
+func TestReadSTAccount(t *testing.T) {
+	srv, _ := fakeST(t)
+	stAt(t, srv, os.Getpid())
+	c := stClient()
+	a := readSTAccount(c, nil)
+	// No slug from st yet: this machine is found by its hostname.
+	if a.slug != "m1" || len(a.machines) != 2 || a.usage == nil || a.usage.Agents[0].Windows[0].UsedPercent != 42 {
+		t.Fatalf("account: %+v", a)
+	}
+	// The machines are carried over within stMachinesEvery.
+	signedOut.Store(true)
+	defer signedOut.Store(false)
+	if b := readSTAccount(c, a); len(b.machines) != 2 {
+		t.Fatalf("re-read too soon: %+v", b)
+	}
+	a.at = time.Time{}
+	if b := readSTAccount(c, a); b.machines != nil {
+		t.Fatalf("signed out: %+v", b.machines)
+	}
+}
+
+func TestOwnSlug(t *testing.T) {
+	ms := []machine{{Slug: "a", Hostname: "h"}, {Slug: "b", Hostname: "x"}}
+	for _, c := range []struct{ slug, host, last, want string }{
+		{"s", "h", "l", "s"}, {"", "h", "l", "l"}, {"", "h", "", "a"}, {"", "", "", ""},
+	} {
+		if got := ownSlug(c.slug, c.host, c.last, ms); got != c.want {
+			t.Errorf("ownSlug(%q, %q, %q) = %q, want %q", c.slug, c.host, c.last, got, c.want)
+		}
+	}
+	if got := ownSlug("", "h", "", append(ms, machine{Slug: "c", Hostname: "h"})); got != "" {
+		t.Errorf("two of a hostname: %q", got)
 	}
 }
